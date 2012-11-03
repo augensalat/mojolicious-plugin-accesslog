@@ -1,0 +1,191 @@
+NAME
+    Mojolicious::Plugin::AccessLog - AccessLog Plugin
+
+VERSION
+    Version 0.001
+
+SYNOPSIS
+      # Mojolicious
+      $self->plugin(AccessLog => {log => '/var/log/mojo/access.log'});
+
+      # Mojolicious::Lite
+      plugin AccessLog => {log => '/var/log/mojo/access.log'};
+
+DESCRIPTION
+    Mojolicious::Plugin::AccessLog is a plugin to easily generate an access
+    log.
+
+OPTIONS
+    Mojolicious::Plugin::AccessLog supports the following options.
+
+  "log"
+    Log data destination.
+
+    Default: "$app->log->handle", so that access log lines go to the same
+    destination as lines created with "$app->log->$method(...)".
+
+    This option may be set to one of the following values:
+
+   Absolute path
+      plugin AccessLog => {log => '/var/log/mojo/access.log'};
+
+    A string specifying an absolute path to the log file. If the file does
+    not exist already, it will be created, otherwise log output will be
+    appended to the file. The log directory must exist in every case though.
+
+   Relative path
+      # Mojolicious::Lite
+      plugin AccessLog => {log => 'log/access.log'};
+
+    Similar to absolute path, but relative to the application home
+    directory.
+
+   File Handle
+      open $fh, '>', '/var/log/mojo/access.log';
+      plugin AccessLog => {log => $fh};
+
+      plugin AccessLog => {log => \*STDERR};
+
+    A file handle to which log lines are printed.
+
+   Object
+      $log = IO::File->new('/var/log/mojo/access.log', O_WRONLY|O_APPEND);
+      plugin AccessLog => {log => $log};
+
+      $log = Log::Dispatch->new(...);
+      plugin AccessLog => {log => $log};
+
+    An object, that implements either a "print" method (like IO::Handle
+    based classes) or an "info" method (i.e. Log::Dispatch or
+    Log::Log4perl).
+
+   Callback routine
+      $log = Log::Dispatch->new(...);
+      plugin AccessLog => {
+        log => sub { $log->log(level => 'debug', message => @_) }
+      };
+
+    A code reference. The provided subroutine will be called for every log
+    line, that it gets as a single argument.
+
+  "format"
+    A string to specify the format of each line of log output.
+
+    Default: "common" (see below).
+
+    This plugin implements a subset of Apache's LogFormat
+    <http://httpd.apache.org/docs/2.0/mod/mod_log_config.html>.
+
+    %%  A percent sign.
+
+    %a  Remote IP-address.
+
+    %A  Local IP-address.
+
+    %b  Size of response in bytes, excluding HTTP headers. In CLF format,
+        i.e. a '-' rather than a 0 when no bytes are sent.
+
+    %B  Size of response in bytes, excluding HTTP headers.
+
+    %D  The time taken to serve the request, in microseconds.
+
+    %h  Remote host. See "hostname_lookups" below.
+
+    %H  The request protocol.
+
+    %l  The remote logname, not implemented: currently always '-'.
+
+    %m  The request method.
+
+    %p  The port of the server serving the request.
+
+    %P  The process ID of the child that serviced the request.
+
+    %r  First line of request: Request method, request URL and request
+        protocol. Synthesized from other fields, so it may not be the
+        request verbatim.
+
+    %s  The HTTP status code of the response.
+
+    %t  Time the request was received (standard english format).
+
+    %T  Custom field for handling times in subclasses.
+
+    %u  Remote user, or '-'.
+
+    %U  The URL path requested, not including any query string.
+
+    %v  The name of the server serving the request.
+
+    %V  The name of the server serving the request.
+
+    In addition, custom values can be referenced, using "%{name}", with one
+    of the mandatory modifier flags "i", "o", "t", "C" or "e":
+
+    %{RequestHeaderName}i
+        The contents of request header "RequestHeaderName".
+
+    %{ResponseHeaderName}o
+        The contents of response header "ResponseHeaderName".
+
+    %{Format}t
+        The time, in the form given by "Format", which should be in
+        strftime(3) format.
+
+    %{CookieName}C
+        The contents of cookie "CookieName" in the request sent to the
+        server.
+
+    %{VariableName}e
+        The contents of environment variable "VariableName".
+
+    For mostly historical reasons template names "common" or "combined" can
+    also be used (note, that these contain the unsupported %l directive):
+
+    common
+          %h %l %u %t "%r" %>s %b
+
+    combined
+          %h %l %u %t "%r" %>s %b "%{Referer}i" "%{User-agent}i"
+
+  "hostname_lookups"
+    Enable reverse DNS hostname lookup if "true". Keep in mind, that this
+    adds latency to every request, if %h is part of the log line, because it
+    requires a DNS lookup to complete before the request is finished.
+    Default is "false" (= disabled).
+
+METHODS
+    Mojolicious::Plugin::AccessLog inherits all methods from
+    Mojolicious::Plugin and implements the following new ones.
+
+  "register"
+      $plugin->register(
+        Mojolicious->new, {
+          log => '/var/log/mojo/access.log',
+          format => 'combined',
+        }
+      );
+
+    Register plugin hooks in Mojolicious application.
+
+SEE ALSO
+    Mojolicious, Plack::Middleware::AccessLog, Catalyst::Plugin::AccessLog,
+    <http://httpd.apache.org/docs/2.0/mod/mod_log_config.html>.
+
+ACKNOWLEDGEMENTS
+    Many thanks to Tatsuhiko Miyagawa for Plack::Middleware::AccessLog and
+    Andrew Rodland for Catalyst::Plugin::AccessLog.
+    "Mojolicious:Plugin::AccessLog" borrows a lot of code and ideas from
+    those modules.
+
+AUTHOR
+    Bernhard Graf <graf(a)cpan.org>
+
+COPYRIGHT AND LICENSE
+    Copyright (C) 2012 Bernhard Graf
+
+    This library is free software; you can redistribute it and/or modify it
+    under the same terms as Perl itself.
+
+    See <http://dev.perl.org/licenses/> for more information.
+
