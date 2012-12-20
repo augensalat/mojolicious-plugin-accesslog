@@ -30,10 +30,16 @@ app->log->unsubscribe('message');
 plugin 'AccessLog',
     log => $logfh,
     format =>
-        '%% %a %A %b %B %D %h %H %m %p %P "%q" "%r" %>s %t %T %u %U %v %V ' .
-        '"%{Referer}i" "%{User-agent}i"';
+        '"%{Referer}i" "%{User-Agent}i" "%{Set-Cookie}i" ' .
+        '%s %{Content-Length}o "%{Content-Type}o" "%{Date}o"';
 
+put '/option' => sub {
+    my $self = shift;
+    $self->res->code(403);
+    $self->render_text('done');
+};
 any '/:any' => sub { shift->render_text('done') };
+
 
 my $t = Test::Mojo->new;
 
@@ -64,26 +70,17 @@ sub req_ok {
         $url = substr $url, 0, $pos;
     }
 
-    my $x = sprintf qq'^%% %s %s %s %s %s %s %s %s %s %s "%s" "%s" %u %s %s %s %s %s %s "%s" "%s"\$',
-        '127\.0\.0\.1', '127\.0\.0\.1',
-        '\d+', '\d+', '\d+',
-        '127\.0\.0\.1',
-        quotemeta('HTTP/1.1'),
-        uc($method),
-        '\d+', '\d+',
-        quotemeta($query),
-        uc($method) . ' ' . quotemeta($url . $query) . ' HTTP/1.1',
-        $code,
-        '\[\d{1,2}/\w{3}/\d{4}:\d{2}:\d{2}:\d{2} [\+\-]\d{4}\]',
-        '\d+',
-        $user,
-        quotemeta($url),
-        'localhost', 'localhost',
+    my $x = sprintf qq'^"%s" "%s" "%s" %d %s "%s" "%s"\$',
         $opts->{Referer} ? quotemeta($opts->{Referer}) : '-',
-        quotemeta('Mojolicious (Perl)');
+        quotemeta('Mojolicious (Perl)'),
+        $opts->{'Set-Cookie'} ? quotemeta($opts->{'Set-Cookie'}) : '-',
+        $code,
+        $code < 300 ? '4' : '\d+',
+        quotemeta('text/html;charset=UTF-8'),
+        '(Mon|Tue|Wed|Thu|Fri|Sat|Sun)\, \d{2} (Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) \d{4} \d{2}:\d{2}:\d{2} GMT';
 
     # issue request
-    $m->($t, $url . $query, $opts)->status_is($code);
+    my $t = $m->($t, $url . $query, $opts)->status_is($code)->tx->res->headers;
 
     # check last log line
     seek $tail, 0, SEEK_CUR;  # clear EOF condition
@@ -98,9 +95,15 @@ sub req_ok {
     like $l, qr{$x}, $l;
 }
 
-req_ok(get => '/' => 404, {Referer => 'http://www.example.com/'});
+req_ok(
+    get => '/' => 404,
+    {
+        Referer => 'http://www.example.com/',
+        'Set-Cookie' => 'SID=4711; Path=/; Domain=example.org',
+    }
+);
 req_ok(post => '/a_letter' => 200, {Referer => '/'});
-req_ok(put => '/option' => 200);
+req_ok(put => '/option' => 403);
 req_ok(delete => '/fb_account' => 200, {Referer => '/are_you_sure?'});
 
 # XXX how to log password with space(s)? XXX

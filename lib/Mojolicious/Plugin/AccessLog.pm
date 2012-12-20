@@ -10,7 +10,7 @@ use Scalar::Util qw(blessed reftype);
 use Socket qw(inet_aton AF_INET);
 use Time::HiRes qw(gettimeofday tv_interval);
 
-our $VERSION = '0.001';
+our $VERSION = '0.002';
 
 my $DEFAULT_FORMAT = 'common';
 my %FORMATS = (
@@ -177,25 +177,18 @@ sub register {
     chomp $format;
     $format .= $conf->{lf} // $/ // "\n";
 
-    if ($time_stats) {
-        $app->hook(
-            around_dispatch => sub {
-                my ($next, $c) = @_;
-                my @t0 = gettimeofday;
+    $app->hook(
+        before_dispatch => sub {
+            my $c = shift;
+            my $t0; $t0 = [gettimeofday] if $time_stats;
 
-                $next->();
+            $c->tx->on(finish => sub {
+                my $tx = shift;
+                $logger->(_log($tx, $format, \@handler, $t0 ? tv_interval($t0) : ()));
+            });
+        }
+    );
 
-                $logger->(_log($c->tx, $format, \@handler, tv_interval(\@t0)));
-            }
-        );
-    }
-    else {
-        $app->hook(
-            after_dispatch => sub {
-                $logger->(_log($_[0]->tx, $format, \@handler))
-            }
-        );
-    }
 }
 
 sub _log {
