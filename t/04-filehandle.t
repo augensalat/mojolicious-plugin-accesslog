@@ -30,7 +30,7 @@ plugin 'AccessLog',
     log => $logfh,
     format =>
         '%% %a %A %b %B %D %h %H %m %p %P "%q" "%r" %>s %t %T %u %U %v %V ' .
-        '"%{Referer}i" "%{User-agent}i"';
+        '"%{Referer}i" "%{User-Agent}i"';
 
 any '/:any' => sub { shift->render_text('done') };
 
