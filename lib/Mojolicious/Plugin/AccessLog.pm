@@ -46,12 +46,12 @@ sub register {
     elsif (blessed $log and my $l = $log->can('print') || $log->can('info')) {
         $logger = sub { $l->($log, $_[0]) };
     }
-    elsif ($reftype eq 'CODE') {    # TEST
-        $logger = $log;             # TEST
+    elsif ($reftype eq 'CODE') {
+        $logger = $log;
     }
     elsif (defined $log and not ref $log) {
         File::Spec->file_name_is_absolute($log)
-            or $log = $app->home->rel_file($log);   # TEST
+            or $log = $app->home->rel_file($log);
 
         my $logdir = File::Spec->catpath((File::Spec->splitpath($log))[0,-2], '');
 
@@ -72,7 +72,7 @@ sub register {
         return;
     }
 
-    my $format = $FORMATS{$conf->{format} // $DEFAULT_FORMAT} || $conf->{format};   # TEST
+    my $format = $FORMATS{$conf->{format} // $DEFAULT_FORMAT} || $conf->{format};
     my @handler;
     my $strftime = sub {
         my ($fmt, @time) = @_;
