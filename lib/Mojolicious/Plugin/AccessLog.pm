@@ -163,16 +163,15 @@ sub register {
         return '-';
     };
 
-    $format =~ s{
+    $format =~ s~
         (?:
          \%\{(.+?)\}([a-z]) |
          \%(?:[<>])?([a-zA-Z\%])
         )
-    }
-    {
+    ~
         push @handler, $1 ? $block_handler->($1, $2) : $char_handler->($3);
         '%s';
-    }egx;
+    ~egx;
 
     chomp $format;
     $format .= $conf->{lf} // $/ // "\n";
