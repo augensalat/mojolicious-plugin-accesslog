@@ -1,9 +1,12 @@
 Revision history for Mojolicious-Plugin-AccessLog
 
+0.003   2013-01-29
+        - Set perl_version in Makefile.PL to make Module::Install happy.
+
 0.002   2013-01-29
         - Delay access log line until transaction is finished.
-	- Fix regex warnings from Perl 5.17.6.
-	- Fix a bug in tests, that became visible in 5.17.6.
+        - Fix regex warnings from Perl 5.17.6.
+        - Fix a bug in tests, that became visible in 5.17.6.
 
 0.001   2012-11-03
         First version, released on an unsuspecting world.
