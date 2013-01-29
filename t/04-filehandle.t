@@ -53,7 +53,7 @@ sub req_ok {
 
     if (index($url, '@') > -1) {
         ($user, $url) = split '@', $url, 2;
-        $opts = {Authorization => 'Basic ' . b64_encode($user . ':pass')};
+        $opts->{Authorization} = 'Basic ' . b64_encode($user . ':pass', '');
     }
 
     $pos = index($url, '?');

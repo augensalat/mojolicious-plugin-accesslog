@@ -35,7 +35,7 @@ sub req_ok {
 
     if (index($url, '@') > -1) {
         ($user, $url) = split '@', $url, 2;
-        $opts = {Authorization => 'Basic ' . b64_encode($user . ':pass')};
+        $opts->{Authorization} = 'Basic ' . b64_encode($user . ':pass', '');
     }
 
     my $x = sprintf qq'^%s - %s %s "%s %s HTTP/1.1" %d %s "%s" "%s"\$',
