@@ -15,7 +15,7 @@ our $VERSION = '0.002';
 my $DEFAULT_FORMAT = 'common';
 my %FORMATS = (
     $DEFAULT_FORMAT => '%h %l %u %t "%r" %>s %b',
-    combined => '%h %l %u %t "%r" %>s %b "%{Referer}i" "%{User-agent}i"',
+    combined => '%h %l %u %t "%r" %>s %b "%{Referer}i" "%{User-Agent}i"',
 );
 
 # some systems (Windows) don't support %z correctly
@@ -43,7 +43,7 @@ sub register {
         select((select($log), $| = 1)[0]);
         $logger = sub { print $log $_[0] };
     }
-    elsif (blessed $log and my $l = $log->can('print') || $log->can('info')) {
+    elsif (blessed($log) and my $l = $log->can('print') || $log->can('info')) {
         $logger = sub { $l->($log, $_[0]) };
     }
     elsif ($reftype eq 'CODE') {
@@ -425,7 +425,7 @@ also be used (note, that these contain the unsupported C<%l> directive):
 
 =item combined
 
-  %h %l %u %t "%r" %>s %b "%{Referer}i" "%{User-agent}i" 
+  %h %l %u %t "%r" %>s %b "%{Referer}i" "%{User-Agent}i" 
 
 =back
 
