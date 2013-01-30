@@ -72,7 +72,6 @@ sub register {
         return;
     }
 
-    my $format = $FORMATS{$conf->{format} // $DEFAULT_FORMAT} || $conf->{format};
     my @handler;
     my $strftime = sub {
         my ($fmt, @time) = @_;
@@ -83,6 +82,18 @@ sub register {
         setlocale(LC_ALL, $old_locale);
         return $out;
     };
+    my $format = $FORMATS{$conf->{format} // $DEFAULT_FORMAT};
+    my $safe_re;
+
+    if ($format) {
+        # Apache default log formats don't quote username, which might
+        # have spaces.
+        $safe_re = qr/([^[:print:]]|\s)/;
+    }
+    else {
+        # For custom log format appropriate quoting is the user's reponsibility.
+        $format = $conf->{format};
+    }
 
     # each handler is called with following parameters:
     # ($tx, $tx->req, $tx->res, $tx->req->url, $time)
@@ -136,7 +147,7 @@ sub register {
         s => sub { $_[2]->code },
         t => sub { '[' . $strftime->('%d/%b/%Y:%H:%M:%S %z', localtime) . ']' },
         T => sub { int $_[4] },
-        u => sub { _safe((split ':', $_[3]->base->userinfo || '-:')[0]) },
+        u => sub { _safe((split ':', $_[3]->base->userinfo || '-:')[0], $safe_re) },
         U => sub { $_[3]->path },
         v => $servername_cb,
         V => $servername_cb,
@@ -200,8 +211,9 @@ sub _log {
 
 sub _safe {
     my $string = shift;
+    my $re = shift // qr/([^[:print:]])/;
 
-    $string =~ s/([^[:print:]])/"\\x" . unpack("H*", $1)/eg
+    $string =~ s/$re/'\x' . unpack('H*', $1)/eg
         if defined $string;
 
     return $string;
@@ -414,8 +426,11 @@ The contents of environment variable C<VariableName>.
 
 =back
 
+Non-printable bytes are replaced by an escape sequence of C<\x..> with
+C<..> being the hexadecimal code of the replaced byte.
+
 For mostly historical reasons template names "common" or "combined" can
-also be used (note, that these contain the unsupported C<%l> directive):
+also be used:
 
 =over
 
@@ -426,6 +441,25 @@ also be used (note, that these contain the unsupported C<%l> directive):
 =item combined
 
   %h %l %u %t "%r" %>s %b "%{Referer}i" "%{User-Agent}i" 
+
+=back
+
+These format template names have two drawbacks though:
+
+=over
+
+=item 1.
+
+The username (%u) is not quoted, but a username is allowed to
+contain spaces. As a consequence, log file parsers might lose track of
+the right fields. To get around this, spaces in usernames are replaced
+by C<\x20> if one of the format template names is used.
+
+=item 2.
+
+The remote logname C<%l> as provided by an ident service is not usefull
+these days and therefore not supported, C<%l> is always substituted by
+a hyphen (C<"-">).
 
 =back
 

@@ -29,7 +29,7 @@ app->log->unsubscribe('message');
 plugin 'AccessLog',
     log => $logfh,
     format =>
-        '%% %a %A %b %B %D %h %H %m %p %P "%q" "%r" %>s %t %T %u %U %v %V ' .
+        '%% %a %A %b %B %D %h %H %m %p %P "%q" "%r" %>s %t %T "%u" %U %v %V ' .
         '"%{Referer}i" "%{User-Agent}i"';
 
 any '/:any' => sub { shift->render_text('done') };
@@ -54,6 +54,7 @@ sub req_ok {
     if (index($url, '@') > -1) {
         ($user, $url) = split '@', $url, 2;
         $opts->{Authorization} = 'Basic ' . b64_encode($user . ':pass', '');
+        $user =~ s/([^[:print:]])/'\x' . unpack('H*', $1)/eg;
     }
 
     $pos = index($url, '?');
@@ -63,7 +64,7 @@ sub req_ok {
         $url = substr $url, 0, $pos;
     }
 
-    my $x = sprintf qq'^%% %s %s %s %s %s %s %s %s %s %s "%s" "%s" %u %s %s %s %s %s %s "%s" "%s"\$',
+    my $x = sprintf qq'^%% %s %s %s %s %s %s %s %s %s %s "%s" "%s" %u %s %s "%s" %s %s %s "%s" "%s"\$',
         '127\.0\.0\.1', '127\.0\.0\.1',
         '\d+', '\d+', '\d+',
         '127\.0\.0\.1',
@@ -75,7 +76,7 @@ sub req_ok {
         $code,
         '\[\d{1,2}/\w{3}/\d{4}:\d{2}:\d{2}:\d{2} [\+\-]\d{4}\]',
         '\d+',
-        $user,
+        quotemeta($user),
         quotemeta($url),
         'localhost', 'localhost',
         $opts->{Referer} ? quotemeta($opts->{Referer}) : '-',
@@ -101,9 +102,7 @@ req_ok(get => '/' => 404, {Referer => 'http://www.example.com/'});
 req_ok(post => '/a_letter' => 200, {Referer => '/'});
 req_ok(put => '/option' => 200);
 req_ok(delete => '/fb_account' => 200, {Referer => '/are_you_sure?'});
-
-# XXX how to log password with space(s)? XXX
-req_ok(get => "3v!lb0y\@/more?foo=bar&foo=baz" => 200);
+req_ok(get => "3v!l b0y\ntoy\@/more?foo=bar&foo=baz" => 200);
 
 1 while unlink $logfile;
 
