@@ -118,7 +118,7 @@ sub register {
         A => sub { $_[0]->local_address // '-' },
         b => sub { $_[2]->is_dynamic ? '-' : $_[2]->body_size || '-' },
         B => sub { $_[2]->is_dynamic ? '0' : $_[2]->body_size },
-        D => sub { $_[4] * 1000000 },
+        D => sub { int($_[4] * 1000000) },
         h => $remoteaddr_cb,
         H => sub { 'HTTP/' . $_[1]->version },
         l => '-',
