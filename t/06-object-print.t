@@ -36,9 +36,15 @@ app->log->unsubscribe('message');
 
 my $log = Logger->new(\my $b);
 
-plugin 'AccessLog', log => $log, format => 'combined';
+plugin 'AccessLog', log => $log, format => 'combined', uname_helper => 'uname';
 
-any '/:any' => sub { shift->render_text('done') };
+any '/:any' => sub {
+    my $self = shift;
+    my $username = $self->req->headers->header('X-Username');
+
+    $self->uname($username) if defined $username;
+    $self->render_text('done');
+};
 
 my $t = Test::Mojo->new;
 
@@ -52,7 +58,7 @@ sub req_ok {
 
     if (index($url, '@') > -1) {
         ($user, $url) = split '@', $url, 2;
-        $opts->{Authorization} = 'Basic ' . b64_encode($user . ':pass', '');
+        $opts->{'X-Username'} = $user;
         $user =~ s/([^[:print:]]|\s)/'\x' . unpack('H*', $1)/eg;
     }
 
@@ -80,6 +86,6 @@ req_ok(get => '/' => 404, {Referer => 'http://www.example.com/'});
 req_ok(post => '/a_letter' => 200, {Referer => '/'});
 req_ok(put => '/option' => 200);
 req_ok(delete => '/fb_account' => 200, {Referer => '/are_you_sure?'});
-req_ok(get => "3v!l\nb0y\@/more?foo=bar&foo=baz" => 200);
+req_ok(get => "3v!l b0y\@/more?foo=bar&foo=baz" => 200);
 
 done_testing;

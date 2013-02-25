@@ -1,11 +1,13 @@
 Revision history for Mojolicious-Plugin-AccessLog
 
-0.003   2013-01-30
+0.003   2013-02-25
         - Set perl_version in Makefile.PL to make Module::Install happy.
-	- Fix occasionally misformatted request serving time in
-	  microseconds (%D).
-	- Escape spaces in usernames for standard log formats "common"
-	  and "combined".
+        - Fix occasionally misformatted request serving time in
+          microseconds (%D).
+        - Escape spaces in usernames for standard log formats "common"
+          and "combined".
+        - New plugin parameter "uname_helper" to define a helper method
+	  to set the username value (%u) of the log.
 
 0.002   2013-01-29
         - Delay access log line until transaction is finished.

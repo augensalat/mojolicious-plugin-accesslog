@@ -72,6 +72,11 @@ sub register {
         return;
     }
 
+    my $uname;
+
+    $app->helper($conf->{uname_helper} => sub { $uname = $_[1] })
+        if $conf->{uname_helper};
+
     my @handler;
     my $strftime = sub {
         my ($fmt, @time) = @_;
@@ -147,7 +152,12 @@ sub register {
         s => sub { $_[2]->code },
         t => sub { '[' . $strftime->('%d/%b/%Y:%H:%M:%S %z', localtime) . ']' },
         T => sub { int $_[4] },
-        u => sub { _safe((split ':', $_[3]->base->userinfo || '-:')[0], $safe_re) },
+        u => sub {
+            _safe(
+                $uname // (split ':', $_[3]->base->userinfo || '-:')[0],
+                $safe_re
+            )
+        },
         U => sub { $_[3]->path },
         v => $servername_cb,
         V => $servername_cb,
@@ -469,6 +479,34 @@ Enable reverse DNS hostname lookup if C<true>. Keep in mind, that this
 adds latency to every request, if C<%h> is part of the log line, because
 it requires a DNS lookup to complete before the request is finished.
 Default is C<false> (= disabled).
+
+=head2 C<uname_helper>
+
+  plugin AccessLog => {
+    log => '/var/log/mojo/access.log',
+    uname_helper => 'set_username',
+  };
+
+  ... 
+
+  # custom authentication for all following resources
+  under => sub {
+    my $self = shift;
+    my $username = $self->param('username') || '';
+
+    if ($username =~ /^mc/) {   # Scottish only 
+      $self->set_username($username);
+    }
+    else {
+      $self->render('denied');
+      return undef;
+    }
+  };
+
+Define a name for a L<helper|Mojolicious/helper> to set the username.
+The default is to use the username part of the L<Mojo::URL/userinfo>.
+With a custom C<uname_helper> any identifier can be set for the user
+value in the log file.
 
 =head1 METHODS
 
