@@ -57,7 +57,7 @@ sub req_ok {
         $user =~ s/([^[:print:]])/'\x' . unpack('H*', $1)/eg;
     }
     elsif ($ENV{REMOTE_USER}) {
-	$user = $ENV{REMOTE_USER};
+        $user = $ENV{REMOTE_USER};
     }
 
     $pos = index($url, '?');

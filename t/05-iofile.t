@@ -63,8 +63,8 @@ sub req_ok {
         $opts->{Authorization} = 'Basic ' . b64_encode($user . ':pass', '');
     }
     elsif ($ENV{REMOTE_USER}) {
-	$user = $ENV{REMOTE_USER};
-	$user =~ s/([^[:print:]]|\s)/'\x' . unpack('H*', $1)/eg;
+        $user = $ENV{REMOTE_USER};
+        $user =~ s/([^[:print:]]|\s)/'\x' . unpack('H*', $1)/eg;
     }
 
     $pos = index($url, '?');

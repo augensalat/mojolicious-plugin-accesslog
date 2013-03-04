@@ -5,11 +5,11 @@ VERSION
     Version 0.003
 
 SYNOPSIS
-      # Mojolicious
-      $self->plugin(AccessLog => {log => '/var/log/mojo/access.log'});
+    # Mojolicious $self->plugin(AccessLog => {log =>
+    '/var/log/mojo/access.log'});
 
-      # Mojolicious::Lite
-      plugin AccessLog => {log => '/var/log/mojo/access.log'};
+    # Mojolicious::Lite plugin AccessLog => {log =>
+    '/var/log/mojo/access.log'};
 
 DESCRIPTION
     Mojolicious::Plugin::AccessLog is a plugin to easily generate an access
@@ -27,43 +27,39 @@ OPTIONS
     This option may be set to one of the following values:
 
    Absolute path
-      plugin AccessLog => {log => '/var/log/mojo/access.log'};
+    plugin AccessLog => {log => '/var/log/mojo/access.log'};
 
     A string specifying an absolute path to the log file. If the file does
     not exist already, it will be created, otherwise log output will be
     appended to the file. The log directory must exist in every case though.
 
    Relative path
-      # Mojolicious::Lite
-      plugin AccessLog => {log => 'log/access.log'};
+    # Mojolicious::Lite plugin AccessLog => {log => 'log/access.log'};
 
     Similar to absolute path, but relative to the application home
     directory.
 
    File Handle
-      open $fh, '>', '/var/log/mojo/access.log';
-      plugin AccessLog => {log => $fh};
+    open $fh, '>', '/var/log/mojo/access.log'; plugin AccessLog => {log =>
+    $fh};
 
-      plugin AccessLog => {log => \*STDERR};
+    plugin AccessLog => {log => \*STDERR};
 
     A file handle to which log lines are printed.
 
    Object
-      $log = IO::File->new('/var/log/mojo/access.log', O_WRONLY|O_APPEND);
-      plugin AccessLog => {log => $log};
+    $log = IO::File->new('/var/log/mojo/access.log', O_WRONLY|O_APPEND);
+    plugin AccessLog => {log => $log};
 
-      $log = Log::Dispatch->new(...);
-      plugin AccessLog => {log => $log};
+    $log = Log::Dispatch->new(...); plugin AccessLog => {log => $log};
 
     An object, that implements either a "print" method (like IO::Handle
     based classes) or an "info" method (i.e. Log::Dispatch or
     Log::Log4perl).
 
    Callback routine
-      $log = Log::Dispatch->new(...);
-      plugin AccessLog => {
-        log => sub { $log->log(level => 'debug', message => @_) }
-      };
+    $log = Log::Dispatch->new(...); plugin AccessLog => { log => sub {
+    $log->log(level => 'debug', message => @_) } };
 
     A code reference. The provided subroutine will be called for every log
     line, that it gets as a single argument.
@@ -146,10 +142,10 @@ OPTIONS
     also be used:
 
     common
-          %h %l %u %t "%r" %>s %b
+        %h %l %u %t "%r" %>s %b
 
     combined
-          %h %l %u %t "%r" %>s %b "%{Referer}i" "%{User-Agent}i"
+        %h %l %u %t "%r" %>s %b "%{Referer}i" "%{User-Agent}i"
 
     These format template names have two drawbacks though:
 
@@ -169,26 +165,22 @@ OPTIONS
     Default is "false" (= disabled).
 
   "uname_helper"
-      plugin AccessLog => {
-        log => '/var/log/mojo/access.log',
-        uname_helper => 'set_username',
-      };
+    plugin AccessLog => { log => '/var/log/mojo/access.log', uname_helper =>
+    'set_username', };
 
-      ... 
+    ...
 
-      # custom authentication for all following resources
-      under => sub {
-        my $self = shift;
-        my $username = $self->param('username') || '';
+    # custom authentication for all following resources under => sub { my
+    $self = shift; my $username = $self->param('username') || '';
 
         if ($username =~ /^mc/) {   # Scottish only 
-          $self->set_username($username);
+        $self->set_username($username);
         }
         else {
-          $self->render('denied');
-          return undef;
+        $self->render('denied');
+        return undef;
         }
-      };
+    };
 
     Define a name for a helper to set the username. The default is to use
     the username part of the "userinfo" in Mojo::URL. With a custom
@@ -200,12 +192,8 @@ METHODS
     Mojolicious::Plugin and implements the following new ones.
 
   "register"
-      $plugin->register(
-        Mojolicious->new, {
-          log => '/var/log/mojo/access.log',
-          format => 'combined',
-        }
-      );
+    $plugin->register( Mojolicious->new, { log =>
+    '/var/log/mojo/access.log', format => 'combined', } );
 
     Register plugin hooks in Mojolicious application.
 

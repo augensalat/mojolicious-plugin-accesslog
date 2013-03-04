@@ -44,8 +44,8 @@ sub req_ok {
         $user =~ s/([^[:print:]]|\s)/'\x' . unpack('H*', $1)/eg;
     }
     elsif ($ENV{REMOTE_USER}) {
-	$user = $ENV{REMOTE_USER};
-	$user =~ s/([^[:print:]]|\s)/'\x' . unpack('H*', $1)/eg;
+        $user = $ENV{REMOTE_USER};
+        $user =~ s/([^[:print:]]|\s)/'\x' . unpack('H*', $1)/eg;
     }
 
     my $x = sprintf qq'^%s - %s %s "%s %s HTTP/1.1" %d %s\$',
