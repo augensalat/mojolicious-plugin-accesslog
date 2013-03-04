@@ -558,7 +558,7 @@ Bernhard Graf <graf(a)cpan.org>
 
 =head1 COPYRIGHT AND LICENSE
 
-Copyright (C) 2012 Bernhard Graf
+Copyright (C) 2012, 2013 Bernhard Graf
 
 This library is free software; you can redistribute it and/or modify it
 under the same terms as Perl itself.
