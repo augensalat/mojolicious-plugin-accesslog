@@ -1,6 +1,6 @@
 Revision history for Mojolicious-Plugin-AccessLog
 
-0.003   2013-02-25
+0.003   2013-03-04
         - Set perl_version in Makefile.PL to make Module::Install happy.
         - Fix occasionally misformatted request serving time in
           microseconds (%D).
@@ -8,6 +8,7 @@ Revision history for Mojolicious-Plugin-AccessLog
           and "combined".
         - New plugin parameter "uname_helper" to define a helper method
 	  to set the username value (%u) of the log.
+	- Honour environment variable REMOTE_USER for %u (Joseph Frazer)
 
 0.002   2013-01-29
         - Delay access log line until transaction is finished.

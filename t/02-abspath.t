@@ -47,6 +47,10 @@ sub req_ok {
         $opts->{Authorization} = 'Basic ' . b64_encode($user . ':pass', '');
         $user =~ s/([^[:print:]]|\s)/'\x' . unpack('H*', $1)/eg;
     }
+    elsif ($ENV{REMOTE_USER}) {
+	$user = $ENV{REMOTE_USER};
+	$user =~ s/([^[:print:]]|\s)/'\x' . unpack('H*', $1)/eg;
+    }
 
     my $x = sprintf qq'^%s - %s %s "%s %s HTTP/1.1" %d %s "%s" "%s"\$',
         '127\.0\.0\.1',
@@ -78,7 +82,11 @@ sub req_ok {
 req_ok(get => '/' => 404, {Referer => 'http://www.example.com/'});
 req_ok(post => '/a_letter' => 200, {Referer => '/'});
 req_ok(put => '/option' => 200);
-req_ok(get => '3v!l b0y@/more?foo=bar&foo=baz' => 200);
+{
+    local $ENV{REMOTE_USER} = 'good boy';
+    req_ok(get => '3v!l b0y@/more?foo=bar&foo=baz' => 200);
+    req_ok(get => "/more?foo=bar&foo=baz" => 200);
+}
 req_ok(delete => '/fb_account' => 200, {Referer => '/are_you_sure?'});
 
 1 while unlink $logfile;

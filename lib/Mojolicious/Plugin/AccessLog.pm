@@ -160,10 +160,17 @@ sub register {
         t => sub { '[' . $strftime->('%d/%b/%Y:%H:%M:%S %z', localtime) . ']' },
         T => sub { int $_[5] },
         u => sub {
-            _safe(
-                $_[0]->stash->{$STASH_ID} // (split ':', $_[4]->base->userinfo || '-:')[0],
-                $safe_re
-            )
+	    my $user = $_[0]->stash->{$STASH_ID};
+
+	    unless (defined $user) {
+		if (defined($user = $_[4]->base->userinfo)) {
+		    $user = (split ':', $_[4]->base->userinfo || '-:')[0];
+		}
+		else {
+		    $user = $ENV{REMOTE_USER} // '-';
+		}
+	    }
+            return _safe($user, $safe_re)
         },
         U => sub { $_[4]->path },
         v => $servername_cb,
