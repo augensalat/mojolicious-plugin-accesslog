@@ -139,8 +139,11 @@ OPTIONS
     %{VariableName}e
         The contents of environment variable "VariableName".
 
+    Non-printable bytes are replaced by an escape sequence of "\x.." with
+    ".." being the hexadecimal code of the replaced byte.
+
     For mostly historical reasons template names "common" or "combined" can
-    also be used (note, that these contain the unsupported %l directive):
+    also be used:
 
     common
           %h %l %u %t "%r" %>s %b
@@ -148,11 +151,49 @@ OPTIONS
     combined
           %h %l %u %t "%r" %>s %b "%{Referer}i" "%{User-Agent}i"
 
+    These format template names have two drawbacks though:
+
+    1.  The username (%u) is not quoted, but a username is allowed to
+        contain spaces. As a consequence, log file parsers might lose track
+        of the right fields. To get around this, spaces in usernames are
+        replaced by "\x20" if one of the format template names is used.
+
+    2.  The remote logname %l as provided by an ident service is not usefull
+        these days and therefore not supported, %l is always substituted by
+        a hyphen ("-").
+
   "hostname_lookups"
     Enable reverse DNS hostname lookup if "true". Keep in mind, that this
     adds latency to every request, if %h is part of the log line, because it
     requires a DNS lookup to complete before the request is finished.
     Default is "false" (= disabled).
+
+  "uname_helper"
+      plugin AccessLog => {
+        log => '/var/log/mojo/access.log',
+        uname_helper => 'set_username',
+      };
+
+      ... 
+
+      # custom authentication for all following resources
+      under => sub {
+        my $self = shift;
+        my $username = $self->param('username') || '';
+
+        if ($username =~ /^mc/) {   # Scottish only 
+          $self->set_username($username);
+        }
+        else {
+          $self->render('denied');
+          return undef;
+        }
+      };
+
+    Define a name for a helper to set the username. The default is to use
+    the username part of the "userinfo" in Mojo::URL. With a custom
+    "uname_helper" any identifier can be set for the user value in the log
+    file.
 
 METHODS
     Mojolicious::Plugin::AccessLog inherits all methods from
