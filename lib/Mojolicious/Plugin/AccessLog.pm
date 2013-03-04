@@ -258,11 +258,11 @@ Version 0.003
 
 =head1 SYNOPSIS
 
-# Mojolicious
-$self->plugin(AccessLog => {log => '/var/log/mojo/access.log'});
+  # Mojolicious
+  $self->plugin(AccessLog => {log => '/var/log/mojo/access.log'});
 
-# Mojolicious::Lite
-plugin AccessLog => {log => '/var/log/mojo/access.log'};
+  # Mojolicious::Lite
+  plugin AccessLog => {log => '/var/log/mojo/access.log'};
 
 =head1 DESCRIPTION
 
@@ -284,7 +284,7 @@ This option may be set to one of the following values:
 
 =head3 Absolute path
 
-plugin AccessLog => {log => '/var/log/mojo/access.log'};
+  plugin AccessLog => {log => '/var/log/mojo/access.log'};
 
 A string specifying an absolute path to the log file. If the file does
 not exist already, it will be created, otherwise log output will be
@@ -292,27 +292,27 @@ appended to the file. The log directory must exist in every case though.
 
 =head3 Relative path
 
-# Mojolicious::Lite
-plugin AccessLog => {log => 'log/access.log'};
+  # Mojolicious::Lite
+  plugin AccessLog => {log => 'log/access.log'};
 
 Similar to absolute path, but relative to the application home directory.
 
 =head3 File Handle
 
-open $fh, '>', '/var/log/mojo/access.log';
-plugin AccessLog => {log => $fh};
+  open $fh, '>', '/var/log/mojo/access.log';
+  plugin AccessLog => {log => $fh};
 
-plugin AccessLog => {log => \*STDERR};
+  plugin AccessLog => {log => \*STDERR};
 
 A file handle to which log lines are printed.
 
 =head3 Object
 
-$log = IO::File->new('/var/log/mojo/access.log', O_WRONLY|O_APPEND);
-plugin AccessLog => {log => $log};
+  $log = IO::File->new('/var/log/mojo/access.log', O_WRONLY|O_APPEND);
+  plugin AccessLog => {log => $log};
 
-$log = Log::Dispatch->new(...);
-plugin AccessLog => {log => $log};
+  $log = Log::Dispatch->new(...);
+  plugin AccessLog => {log => $log};
 
 An object, that implements either a C<print> method (like L<IO::Handle>
 based classes) or an C<info> method (i.e. L<Log::Dispatch> or
@@ -320,10 +320,10 @@ L<Log::Log4perl>).
 
 =head3 Callback routine
 
-$log = Log::Dispatch->new(...);
-plugin AccessLog => {
+  $log = Log::Dispatch->new(...);
+  plugin AccessLog => {
     log => sub { $log->log(level => 'debug', message => @_) }
-};
+  };
 
 A code reference. The provided subroutine will be called for every log
 line, that it gets as a single argument.
@@ -461,11 +461,11 @@ also be used:
 
 =item common
 
-%h %l %u %t "%r" %>s %b
+  %h %l %u %t "%r" %>s %b
 
 =item combined
 
-%h %l %u %t "%r" %>s %b "%{Referer}i" "%{User-Agent}i" 
+  %h %l %u %t "%r" %>s %b "%{Referer}i" "%{User-Agent}i"
 
 =back
 
@@ -497,26 +497,26 @@ Default is C<false> (= disabled).
 
 =head2 C<uname_helper>
 
-plugin AccessLog => {
+  plugin AccessLog => {
     log => '/var/log/mojo/access.log',
     uname_helper => 'set_username',
-};
+  };
 
-... 
+  ...
 
-# custom authentication for all following resources
-under => sub {
+  # custom authentication for all following resources
+  under => sub {
     my $self = shift;
     my $username = $self->param('username') || '';
 
     if ($username =~ /^mc/) {   # Scottish only 
-    $self->set_username($username);
+      $self->set_username($username);
     }
     else {
-    $self->render('denied');
-    return undef;
+      $self->render('denied');
+      return undef;
     }
-};
+  };
 
 Define a name for a L<helper|Mojolicious/helper> to set the username.
 The default is to use the username part of the L<Mojo::URL/userinfo>.
@@ -530,12 +530,12 @@ L<Mojolicious::Plugin> and implements the following new ones.
 
 =head2 C<register>
 
-$plugin->register(
+  $plugin->register(
     Mojolicious->new, {
-    log => '/var/log/mojo/access.log',
-    format => 'combined',
+      log => '/var/log/mojo/access.log',
+      format => 'combined',
     }
-);
+  );
 
 Register plugin hooks in L<Mojolicious> application.
 
