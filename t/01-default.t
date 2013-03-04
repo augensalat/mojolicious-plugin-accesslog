@@ -64,7 +64,7 @@ sub req_ok {
 req_ok(get => '/' => 404, {Referer => 'http://www.example.com/'});
 req_ok(post => '/a_letter' => 200, {Referer => '/'});
 req_ok(put => '/option' => 200);
-req_ok(delete => '/fb_account' => 200, {Referer => '/are_you_sure?'});
 req_ok(get => "3v!l\tb0y\@/more?foo=bar&foo=baz" => 200);
+req_ok(delete => '/fb_account' => 200, {Referer => '/are_you_sure?'});
 
 done_testing;

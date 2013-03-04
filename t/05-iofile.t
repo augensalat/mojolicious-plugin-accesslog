@@ -104,10 +104,8 @@ req_ok(
 );
 req_ok(post => '/a_letter' => 200, {Referer => '/'});
 req_ok(put => '/option' => 403);
-req_ok(delete => '/fb_account' => 200, {Referer => '/are_you_sure?'});
-
-# XXX how to log password with space(s)? XXX
 req_ok(get => "3v!lb0y\@/more?foo=bar&foo=baz" => 200);
+req_ok(delete => '/fb_account' => 200, {Referer => '/are_you_sure?'});
 
 1 while unlink $logfile;
 
