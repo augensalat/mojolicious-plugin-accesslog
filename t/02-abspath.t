@@ -25,7 +25,7 @@ app->log->unsubscribe('message');
 
 plugin 'AccessLog', log => $logfile, format => 'combined';
 
-any '/:any' => sub { shift->render_text('done') };
+any '/:any' => sub { shift->render(text => 'done') };
 
 my $t = Test::Mojo->new;
 

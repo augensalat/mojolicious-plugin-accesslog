@@ -38,7 +38,7 @@ my $log = Logger->new(\my $b);
 
 plugin 'AccessLog', log => $log, format => 'combined';
 
-any '/:any' => sub { shift->render_text('done') };
+any '/:any' => sub { shift->render(text => 'done') };
 
 my $t = Test::Mojo->new;
 

@@ -32,7 +32,7 @@ plugin 'AccessLog',
         '%% %a %A %b %B %D %h %H %m %p %P "%q" "%r" %>s %t %T "%u" %U %v %V ' .
         '"%{Referer}i" "%{User-Agent}i"';
 
-any '/:any' => sub { shift->render_text('done') };
+any '/:any' => sub { shift->render(text => 'done') };
 
 my $t = Test::Mojo->new;
 
