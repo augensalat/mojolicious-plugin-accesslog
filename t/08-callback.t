@@ -21,7 +21,7 @@ my $b;
 
 plugin 'AccessLog', log => sub { $b = $_[0] }, format => 'combined';
 
-any '/:any' => sub { shift->render_text('done') };
+any '/:any' => sub { shift->render(text => 'done') };
 
 my $t = Test::Mojo->new;
 

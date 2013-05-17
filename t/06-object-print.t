@@ -43,7 +43,7 @@ any '/:any' => sub {
     my $username = $self->req->headers->header('X-Username');
 
     $self->uname($username) if defined $username;
-    $self->render_text('done');
+    $self->render(text => 'done');
 };
 
 my $t = Test::Mojo->new;

@@ -36,9 +36,9 @@ plugin 'AccessLog',
 put '/option' => sub {
     my $self = shift;
     $self->res->code(403);
-    $self->render_text('done');
+    $self->render(text => 'done');
 };
-any '/:any' => sub { shift->render_text('done') };
+any '/:any' => sub { shift->render(text => 'done') };
 
 
 my $t = Test::Mojo->new;
