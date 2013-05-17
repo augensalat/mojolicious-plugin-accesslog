@@ -1,5 +1,8 @@
 Revision history for Mojolicious-Plugin-AccessLog
 
+0.004   2013-05-17
+        - Fix for Mojolicious 4.0 breaking changes (ChinaXing)
+
 0.003   2013-03-04
         - Set perl_version in Makefile.PL to make Module::Install happy.
         - Fix occasionally misformatted request serving time in

@@ -10,7 +10,7 @@ use Scalar::Util qw(blessed reftype);
 use Socket qw(inet_aton AF_INET);
 use Time::HiRes qw(gettimeofday tv_interval);
 
-our $VERSION = '0.003';
+our $VERSION = '0.004';
 
 my $DEFAULT_FORMAT = 'common';
 my %FORMATS = (
@@ -254,7 +254,7 @@ Mojolicious::Plugin::AccessLog - AccessLog Plugin
 
 =head1 VERSION
 
-Version 0.003
+Version 0.004
 
 =head1 SYNOPSIS
 
