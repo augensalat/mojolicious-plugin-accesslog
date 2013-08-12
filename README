@@ -73,8 +73,7 @@ OPTIONS
 
     Default: "common" (see below).
 
-    This plugin implements a subset of Apache's LogFormat
-    <http://httpd.apache.org/docs/2.0/mod/mod_log_config.html>.
+    This plugin implements a subset of <Apache's LogFormat>.
 
     %%  A percent sign.
 
@@ -93,9 +92,13 @@ OPTIONS
 
     %H  The request protocol.
 
+    %I  Bytes received, including request and headers. Cannot be zero.
+
     %l  The remote logname, not implemented: currently always '-'.
 
     %m  The request method.
+
+    %O  Bytes sent, including headers. Cannot be zero.
 
     %p  The port of the server serving the request.
 
@@ -142,14 +145,17 @@ OPTIONS
     Non-printable bytes are replaced by an escape sequence of "\x.." with
     ".." being the hexadecimal code of the replaced byte.
 
-    For mostly historical reasons template names "common" or "combined" can
-    also be used:
+    For mostly historical reasons template names "common", "combined" and
+    "combinedio" can also be used:
 
     common
           %h %l %u %t "%r" %>s %b
 
     combined
           %h %l %u %t "%r" %>s %b "%{Referer}i" "%{User-Agent}i"
+
+    combinedio
+          %h %l %u %t "%r" %>s %b "%{Referer}i" "%{User-Agent}i" %I %O
 
     These format template names have two drawbacks though:
 
@@ -211,7 +217,7 @@ METHODS
 
 SEE ALSO
     Mojolicious, Plack::Middleware::AccessLog, Catalyst::Plugin::AccessLog,
-    <http://httpd.apache.org/docs/2.0/mod/mod_log_config.html>.
+    http://httpd.apache.org/docs/current/mod/mod_log_config.html.
 
 ACKNOWLEDGEMENTS
     Many thanks to Tatsuhiko Miyagawa for Plack::Middleware::AccessLog and
@@ -223,10 +229,10 @@ AUTHOR
     Bernhard Graf <graf(a)cpan.org>
 
 COPYRIGHT AND LICENSE
-    Copyright (C) 2012, 2013 Bernhard Graf
+    Copyright (C) 2012 - 2014 Bernhard Graf
 
     This library is free software; you can redistribute it and/or modify it
     under the same terms as Perl itself.
 
-    See <http://dev.perl.org/licenses/> for more information.
+    See http://dev.perl.org/licenses/ for more information.
 

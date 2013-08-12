@@ -1,6 +1,7 @@
 package Mojolicious::Plugin::AccessLog;
 
 use Mojo::Base 'Mojolicious::Plugin';
+use Mojo::IOLoop;
 
 use Carp qw(croak);
 use File::Spec;
@@ -10,12 +11,13 @@ use Scalar::Util qw(blessed reftype);
 use Socket qw(inet_aton AF_INET);
 use Time::HiRes qw(gettimeofday tv_interval);
 
-our $VERSION = '0.004';
+our $VERSION = '0.005';
 
 my $DEFAULT_FORMAT = 'common';
 my %FORMATS = (
     $DEFAULT_FORMAT => '%h %l %u %t "%r" %>s %b',
     combined => '%h %l %u %t "%r" %>s %b "%{Referer}i" "%{User-Agent}i"',
+    combinedio => '%h %l %u %t "%r" %>s %b "%{Referer}i" "%{User-Agent}i" %I %O',
 );
 
 my $STASH_ID = 'mojolicious.plugin.accesslog.username';
@@ -31,6 +33,7 @@ my $TZOFFSET = strftime('%z', localtime) !~ /^[+-]\d{4}$/ && do {
 sub register {
     my ($self, $app, $conf) = @_;
     my $log = $conf->{log} // $app->log->handle;
+    my $fh;
 
     unless ($log) { # somebody cleared $app->log->handle?
         # Log a warning nevertheless - there might be an event handler.
@@ -42,8 +45,9 @@ sub register {
     my $logger;
 
     if ($reftype eq 'GLOB') {
-        select((select($log), $| = 1)[0]);
-        $logger = sub { print $log $_[0] };
+        $fh = $log;
+        eval { $fh->autoflush(1) };
+        $logger = sub { $fh->print($_[0]) };
     }
     elsif (blessed($log) and my $l = $log->can('print') || $log->can('info')) {
         $logger = sub { $l->($log, $_[0]) };
@@ -55,21 +59,13 @@ sub register {
         File::Spec->file_name_is_absolute($log)
             or $log = $app->home->rel_file($log);
 
-        my $logdir = File::Spec->catpath((File::Spec->splitpath($log))[0,-2], '');
+        $fh = IO::File->new($log, '>>')
+            or croak qq{Can't open log file "$log": $!};
 
-        if (-w $logdir) {
-            my $fh = IO::File->new($log, '>>')
-                or croak qq{Can't open log file "$log": $!};
-
-            $fh->autoflush(1);
-            $logger = sub { $fh->print($_[0]) };
-        }
-        else {
-            $app->log->error('Directory is not writable: ' . $logdir);
-        }
+        $fh->autoflush(1);
+        $logger = sub { $fh->print($_[0]) };
     }
-
-    if (ref $logger ne 'CODE') {
+    else {
         $app->log->error(__PACKAGE__ . ': not a valid "log" value');
         return;
     }
@@ -144,8 +140,10 @@ sub register {
         D => sub { int($_[5] * 1000000) },
         h => $remoteaddr_cb,
         H => sub { 'HTTP/' . $_[2]->version },
+        I => sub { $_[6] },
         l => '-',
         m => sub { $_[2]->method },
+        O => sub { $_[7] },
         p => sub { $_[1]->local_port },
         P => sub { $$ },
         q => sub {
@@ -184,12 +182,13 @@ sub register {
         };
     }
 
-    my $time_stats;
+    my ($time_stats, $traffic_stats);
     my $char_handler = sub {
         my $char = shift;
         my $cb = $char_handler{$char};
 
         $time_stats = 1 if $char eq 'T' or $char eq 'D';
+        $traffic_stats = 1 if $char eq 'I' or $char eq 'O';
 
         return $char_handler{$char} if $char_handler{$char};
 
@@ -214,11 +213,32 @@ sub register {
     $app->hook(
         before_dispatch => sub {
             my $c = shift;
-            my $t0; $t0 = [gettimeofday] if $time_stats;
+            my $tx = $c->tx;
+            my $t; $t = [gettimeofday] if $time_stats;
+            my $bcr = my $bcw = 0;
+            my ($s, $r, $w);
+            my ($br, $bw) = ('', '');
 
-            $c->tx->on(finish => sub {
+            if ($traffic_stats) {
+                $tx->on(request => sub {
+                    my $tx = shift;
+                    $s = Mojo::IOLoop->stream($tx->connection);
+                    $r = $s->on(read  => sub { $br .= $_[1]; $bcr += length $_[1] });
+                    $w = $s->on(write => sub { $bw .= $_[1]; $bcw += length $_[1] });
+
+                });
+            }
+
+            $tx->on(finish => sub {
                 my $tx = shift;
-                $logger->(_log($c, $format, \@handler, $t0 ? tv_interval($t0) : ()));
+
+                $t = tv_interval($t) if $time_stats;
+
+                if ($traffic_stats) {
+                    $s->unsubscribe(read  => $r);
+                    $s->unsubscribe(write => $w);
+                }
+                $logger->(_log($c, $format, \@handler, $t, $bcr, $bcw));
             });
         }
     );
@@ -259,7 +279,7 @@ Version 0.004
 =head1 SYNOPSIS
 
   # Mojolicious
-  $self->plugin(AccessLog => {log => '/var/log/mojo/access.log'});
+  $self->plugin(AccessLog => log => '/var/log/mojo/access.log');
 
   # Mojolicious::Lite
   plugin AccessLog => {log => '/var/log/mojo/access.log'};
@@ -335,7 +355,7 @@ A string to specify the format of each line of log output.
 Default: "common" (see below).
 
 This plugin implements a subset of
-L<Apache's LogFormat|http://httpd.apache.org/docs/2.0/mod/mod_log_config.html>.
+L<Apache's LogFormat|http://httpd.apache.org/docs/current/mod/mod_log_config.html>.
 
 =over
 
@@ -372,6 +392,10 @@ Remote host. See L</hostname_lookups> below.
 
 The request protocol.
 
+=item %I
+
+Bytes received, including request and headers. Cannot be zero.
+
 =item %l
 
 The remote logname, not implemented: currently always '-'.
@@ -379,6 +403,10 @@ The remote logname, not implemented: currently always '-'.
 =item %m
 
 The request method.
+
+=item %O
+
+Bytes sent, including headers. Cannot be zero.
 
 =item %p
 
@@ -454,8 +482,8 @@ The contents of environment variable C<VariableName>.
 Non-printable bytes are replaced by an escape sequence of C<\x..> with
 C<..> being the hexadecimal code of the replaced byte.
 
-For mostly historical reasons template names "common" or "combined" can
-also be used:
+For mostly historical reasons template names "common", "combined" and
+"combinedio" can also be used:
 
 =over
 
@@ -466,6 +494,10 @@ also be used:
 =item combined
 
   %h %l %u %t "%r" %>s %b "%{Referer}i" "%{User-Agent}i"
+
+=item combinedio
+
+  %h %l %u %t "%r" %>s %b "%{Referer}i" "%{User-Agent}i" %I %O
 
 =back
 
@@ -543,7 +575,7 @@ Register plugin hooks in L<Mojolicious> application.
 
 L<Mojolicious>, L<Plack::Middleware::AccessLog>,
 L<Catalyst::Plugin::AccessLog>,
-L<http://httpd.apache.org/docs/2.0/mod/mod_log_config.html>.
+L<http://httpd.apache.org/docs/current/mod/mod_log_config.html>.
 
 =head1 ACKNOWLEDGEMENTS
 
@@ -558,7 +590,7 @@ Bernhard Graf <graf(a)cpan.org>
 
 =head1 COPYRIGHT AND LICENSE
 
-Copyright (C) 2012, 2013 Bernhard Graf
+Copyright (C) 2012 - 2014 Bernhard Graf
 
 This library is free software; you can redistribute it and/or modify it
 under the same terms as Perl itself.
