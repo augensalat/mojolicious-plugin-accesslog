@@ -2,7 +2,7 @@ NAME
     Mojolicious::Plugin::AccessLog - AccessLog Plugin
 
 VERSION
-    Version 0.004
+    Version 0.005
 
 SYNOPSIS
       # Mojolicious
@@ -142,14 +142,17 @@ OPTIONS
     Non-printable bytes are replaced by an escape sequence of "\x.." with
     ".." being the hexadecimal code of the replaced byte.
 
-    For mostly historical reasons template names "common" or "combined" can
-    also be used:
+    For mostly historical reasons template names "common", "combined" and
+    "combinedio" can also be used:
 
     common
           %h %l %u %t "%r" %>s %b
 
     combined
           %h %l %u %t "%r" %>s %b "%{Referer}i" "%{User-Agent}i"
+
+    combinedio
+          %h %l %u %t "%r" %>s %b "%{Referer}i" "%{User-Agent}i" %I %O
 
     These format template names have two drawbacks though:
 
