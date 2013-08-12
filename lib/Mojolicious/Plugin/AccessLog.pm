@@ -1,6 +1,7 @@
 package Mojolicious::Plugin::AccessLog;
 
 use Mojo::Base 'Mojolicious::Plugin';
+use Mojo::IOLoop;
 
 use Carp qw(croak);
 use File::Spec;
@@ -10,12 +11,13 @@ use Scalar::Util qw(blessed reftype);
 use Socket qw(inet_aton AF_INET);
 use Time::HiRes qw(gettimeofday tv_interval);
 
-our $VERSION = '0.004';
+our $VERSION = '0.005';
 
 my $DEFAULT_FORMAT = 'common';
 my %FORMATS = (
     $DEFAULT_FORMAT => '%h %l %u %t "%r" %>s %b',
     combined => '%h %l %u %t "%r" %>s %b "%{Referer}i" "%{User-Agent}i"',
+    combinedio => '%h %l %u %t "%r" %>s %b "%{Referer}i" "%{User-Agent}i" %I %O',
 );
 
 my $STASH_ID = 'mojolicious.plugin.accesslog.username';
@@ -144,8 +146,10 @@ sub register {
         D => sub { int($_[5] * 1000000) },
         h => $remoteaddr_cb,
         H => sub { 'HTTP/' . $_[2]->version },
+        I => sub { $_[6] },
         l => '-',
         m => sub { $_[2]->method },
+        O => sub { $_[7] },
         p => sub { $_[1]->local_port },
         P => sub { $$ },
         q => sub {
@@ -184,12 +188,13 @@ sub register {
         };
     }
 
-    my $time_stats;
+    my ($time_stats, $traffic_stats);
     my $char_handler = sub {
         my $char = shift;
         my $cb = $char_handler{$char};
 
         $time_stats = 1 if $char eq 'T' or $char eq 'D';
+        $traffic_stats = 1 if $char eq 'I' or $char eq 'O';
 
         return $char_handler{$char} if $char_handler{$char};
 
@@ -214,11 +219,32 @@ sub register {
     $app->hook(
         before_dispatch => sub {
             my $c = shift;
-            my $t0; $t0 = [gettimeofday] if $time_stats;
+            my $tx = $c->tx;
+            my $t; $t = [gettimeofday] if $time_stats;
+            my $bcr = my $bcw = 0;
+            my ($s, $r, $w);
+            my ($br, $bw) = ('', '');
 
-            $c->tx->on(finish => sub {
+            if ($traffic_stats) {
+                $tx->on(request => sub {
+                    my $tx = shift;
+                    $s = Mojo::IOLoop->stream($tx->connection);
+                    $r = $s->on(read  => sub { $br .= $_[1]; $bcr += length $_[1] });
+                    $w = $s->on(write => sub { $bw .= $_[1]; $bcw += length $_[1] });
+
+                });
+            }
+
+            $tx->on(finish => sub {
                 my $tx = shift;
-                $logger->(_log($c, $format, \@handler, $t0 ? tv_interval($t0) : ()));
+
+                $t = tv_interval($t) if $time_stats;
+
+                if ($traffic_stats) {
+                    $s->unsubscribe(read  => $r);
+                    $s->unsubscribe(write => $w);
+                }
+                $logger->(_log($c, $format, \@handler, $t, $bcr, $bcw));
             });
         }
     );
@@ -454,8 +480,8 @@ The contents of environment variable C<VariableName>.
 Non-printable bytes are replaced by an escape sequence of C<\x..> with
 C<..> being the hexadecimal code of the replaced byte.
 
-For mostly historical reasons template names "common" or "combined" can
-also be used:
+For mostly historical reasons template names "common", "combined" and
+"combinedio" can also be used:
 
 =over
 
@@ -466,6 +492,10 @@ also be used:
 =item combined
 
   %h %l %u %t "%r" %>s %b "%{Referer}i" "%{User-Agent}i"
+
+=item combinedio
+
+  %h %l %u %t "%r" %>s %b "%{Referer}i" "%{User-Agent}i" %I %O
 
 =back
 
