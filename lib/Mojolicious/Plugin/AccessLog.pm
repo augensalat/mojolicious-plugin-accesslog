@@ -99,7 +99,7 @@ sub register {
         $safe_re = qr/([^[:print:]]|\s)/;
     }
     else {
-        # For custom log format appropriate quoting is the user's reponsibility.
+        # For custom log format appropriate quoting is the user's responsibility.
         $format = $conf->{format};
     }
 
@@ -514,7 +514,7 @@ by C<\x20> if one of the format template names is used.
 
 =item 2.
 
-The remote logname C<%l> as provided by an ident service is not usefull
+The remote logname C<%l> as provided by an ident service is not useful
 these days and therefore not supported, C<%l> is always substituted by
 a hyphen (C<"-">).
 
