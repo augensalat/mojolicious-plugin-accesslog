@@ -73,8 +73,7 @@ OPTIONS
 
     Default: "common" (see below).
 
-    This plugin implements a subset of Apache's LogFormat
-    <http://httpd.apache.org/docs/2.0/mod/mod_log_config.html>.
+    This plugin implements a subset of <Apache's LogFormat>.
 
     %%  A percent sign.
 
