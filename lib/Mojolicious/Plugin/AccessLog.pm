@@ -223,14 +223,13 @@ sub register {
             my $t; $t = [gettimeofday] if $time_stats;
             my $bcr = my $bcw = 0;
             my ($s, $r, $w);
-            my ($br, $bw) = ('', '');
 
             if ($traffic_stats) {
                 $tx->on(request => sub {
                     my $tx = shift;
                     $s = Mojo::IOLoop->stream($tx->connection);
-                    $r = $s->on(read  => sub { $br .= $_[1]; $bcr += length $_[1] });
-                    $w = $s->on(write => sub { $bw .= $_[1]; $bcw += length $_[1] });
+                    $r = $s->on(read  => sub { $bcr += length $_[1] });
+                    $w = $s->on(write => sub { $bcw += length $_[1] });
 
                 });
             }
