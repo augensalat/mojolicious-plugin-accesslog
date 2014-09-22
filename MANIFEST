@@ -24,5 +24,6 @@ t/05-iofile.t
 t/06-object-print.t
 t/07-object-info.t
 t/08-callback.t
+t/09-logio.t
 t/pod-coverage.t
 t/pod.t
