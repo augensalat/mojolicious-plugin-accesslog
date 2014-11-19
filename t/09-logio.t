@@ -106,7 +106,8 @@ sub req_ok {
         uc($method),
         quotemeta($url),
         $code,
-        $opts->{nolength} ? '-' :'\d+',
+        $opts->{nolength} ? '-'
+            : $opts->{checklength} ? $opts->{checklength} : '\d+',
         $opts->{Referer} ? quotemeta($opts->{Referer}) : '-',
         quotemeta('Mojolicious (Perl)'),
         $bcr,
@@ -127,5 +128,10 @@ req_ok(put => '/option' => 200);
 }
 req_ok(delete => '/fb_account' => 200, {Referer => '/are_you_sure?'});
 req_ok(get => '/dynamic' => 200, {nolength => 1});
+req_ok(get => '/static.txt' => 206, {Range => 'bytes=2-5', checklength => 4});
 
 done_testing;
+
+__DATA__
+@@ static.txt (base64)
+dGVzdCAxMjMKbGFsYWxh

@@ -73,7 +73,8 @@ OPTIONS
 
     Default: "common" (see below).
 
-    This plugin implements a subset of <Apache's LogFormat>.
+    This plugin implements a subset of Apache's LogFormat
+    http://httpd.apache.org/docs/2.0/mod/mod_log_config.html.
 
     %%  A percent sign.
 
@@ -187,7 +188,7 @@ OPTIONS
         my $self = shift;
         my $username = $self->param('username') || '';
 
-        if ($username =~ /^mc/) {   # Scottish only 
+        if ($username =~ /^mc/) {   # Scottish only
           $self->set_username($username);
         }
         else {
