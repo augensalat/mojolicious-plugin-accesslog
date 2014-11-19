@@ -141,8 +141,14 @@ sub register {
         '%' => '%',
         a => $remoteaddr_cb,
         A => sub { $_[1]->local_address // '-' },
-        b => sub { $_[3]->content->is_dynamic ? '-' : $_[3]->body_size || '-' },
-        B => sub { $_[3]->content->is_dynamic ? '0' : $_[3]->body_size },
+        b => sub {
+            $_[3]->content->is_dynamic
+                ? '-' : $_[3]->headers->content_length || '-';
+        },
+        B => sub {
+            $_[3]->content->is_dynamic
+                ? '0' : $_[3]->headers->content_length;
+        },
         D => sub { int($_[5] * 1000000) },
         h => $remoteaddr_cb,
         H => sub { 'HTTP/' . $_[2]->version },
