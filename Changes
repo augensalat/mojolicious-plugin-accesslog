@@ -1,5 +1,8 @@
 Revision history for Mojolicious-Plugin-AccessLog
 
+0.006   2014-11-19
+        - Fix response byte count for range requests (%b %B).
+
 0.005   2013-08-12
         - Add traffic measuring like Apache mod_logio.
 
