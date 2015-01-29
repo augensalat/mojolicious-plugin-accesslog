@@ -81,7 +81,7 @@ sub req_ok {
         '\d+',
         quotemeta($user),
         quotemeta($url),
-        'localhost', 'localhost',
+        ('(?:localhost|127\.0\.0\.1)') x 2,
         $opts->{Referer} ? quotemeta($opts->{Referer}) : '-',
         quotemeta('Mojolicious (Perl)');
 
