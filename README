@@ -6,7 +6,7 @@ VERSION
 
 SYNOPSIS
       # Mojolicious
-      $self->plugin(AccessLog => {log => '/var/log/mojo/access.log'});
+      $self->plugin(AccessLog => log => '/var/log/mojo/access.log');
 
       # Mojolicious::Lite
       plugin AccessLog => {log => '/var/log/mojo/access.log'};
@@ -74,7 +74,7 @@ OPTIONS
     Default: "common" (see below).
 
     This plugin implements a subset of Apache's LogFormat
-    http://httpd.apache.org/docs/2.0/mod/mod_log_config.html.
+    <http://httpd.apache.org/docs/current/mod/mod_log_config.html>.
 
     %%  A percent sign.
 
@@ -165,7 +165,7 @@ OPTIONS
         of the right fields. To get around this, spaces in usernames are
         replaced by "\x20" if one of the format template names is used.
 
-    2.  The remote logname %l as provided by an ident service is not usefull
+    2.  The remote logname %l as provided by an ident service is not useful
         these days and therefore not supported, %l is always substituted by
         a hyphen ("-").
 
@@ -218,7 +218,7 @@ METHODS
 
 SEE ALSO
     Mojolicious, Plack::Middleware::AccessLog, Catalyst::Plugin::AccessLog,
-    http://httpd.apache.org/docs/current/mod/mod_log_config.html.
+    <http://httpd.apache.org/docs/current/mod/mod_log_config.html>.
 
 ACKNOWLEDGEMENTS
     Many thanks to Tatsuhiko Miyagawa for Plack::Middleware::AccessLog and
@@ -235,5 +235,5 @@ COPYRIGHT AND LICENSE
     This library is free software; you can redistribute it and/or modify it
     under the same terms as Perl itself.
 
-    See http://dev.perl.org/licenses/ for more information.
+    See <http://dev.perl.org/licenses/> for more information.
 
