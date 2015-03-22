@@ -32,7 +32,13 @@ plugin 'AccessLog',
         '%% %a %A %b %B %D %h %H %m %p %P "%q" "%r" %>s %t %T "%u" %U %v %V ' .
         '"%{Referer}i" "%{User-Agent}i"';
 
-any '/:any' => sub { shift->render(text => 'done') };
+any '/:any' => sub {
+    my $c = shift;
+    my $xuser = $c->req->headers->header('X-User');
+
+    $c->req->env->{REMOTE_USER} = $xuser if $xuser;
+    $c->render(text => 'done');
+};
 
 my $t = Test::Mojo->new;
 
@@ -56,8 +62,9 @@ sub req_ok {
         $opts->{Authorization} = 'Basic ' . b64_encode($user . ':pass', '');
         $user =~ s/([^[:print:]])/'\x' . unpack('H*', $1)/eg;
     }
-    elsif ($ENV{REMOTE_USER}) {
-        $user = $ENV{REMOTE_USER};
+    elsif ($opts->{'X-User'}) {
+        $user = $opts->{'X-User'};
+        $user =~ s/([^[:print:]])/'\x' . unpack('H*', $1)/eg;
     }
 
     $pos = index($url, '?');
@@ -105,9 +112,8 @@ req_ok(get => '/' => 404, {Referer => 'http://www.example.com/'});
 req_ok(post => '/a_letter' => 200, {Referer => '/'});
 req_ok(put => '/option' => 200);
 {
-    local $ENV{REMOTE_USER} = 'good boy';
     req_ok(get => "3v!l b0y\ntoy\@/more?foo=bar&foo=baz" => 200);
-    req_ok(get => "/more?foo=bar&foo=baz" => 200);
+    req_ok(get => "/more?foo=bar&foo=baz" => 200, {'X-User' => 'good boy'});
 }
 req_ok(delete => '/fb_account' => 200, {Referer => '/are_you_sure?'});
 

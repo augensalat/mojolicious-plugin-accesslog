@@ -38,8 +38,14 @@ put '/option' => sub {
     $self->res->code(403);
     $self->render(text => 'done');
 };
-any '/:any' => sub { shift->render(text => 'done') };
 
+any '/:any' => sub {
+    my $c = shift;
+    my $xuser = $c->req->headers->header('X-User');
+
+    $c->req->env->{REMOTE_USER} = $xuser if $xuser;
+    $c->render(text => 'done');
+};
 
 my $t = Test::Mojo->new;
 
@@ -62,8 +68,8 @@ sub req_ok {
         ($user, $url) = split '@', $url, 2;
         $opts->{Authorization} = 'Basic ' . b64_encode($user . ':pass', '');
     }
-    elsif ($ENV{REMOTE_USER}) {
-        $user = $ENV{REMOTE_USER};
+    elsif ($opts->{'X-User'}) {
+        $user = $opts->{'X-User'};
         $user =~ s/([^[:print:]]|\s)/'\x' . unpack('H*', $1)/eg;
     }
 
@@ -109,9 +115,8 @@ req_ok(
 req_ok(post => '/a_letter' => 200, {Referer => '/'});
 req_ok(put => '/option' => 403);
 {
-    local $ENV{REMOTE_USER} = 'good boy';
     req_ok(get => "3v!lb0y\@/more?foo=bar&foo=baz" => 200);
-    req_ok(get => "/more?foo=bar&foo=baz" => 200);
+    req_ok(get => "/more?foo=bar&foo=baz" => 200, {'X-User' => 'good boy'});
 }
 req_ok(delete => '/fb_account' => 200, {Referer => '/are_you_sure?'});
 

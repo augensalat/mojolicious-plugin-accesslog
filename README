@@ -2,7 +2,7 @@ NAME
     Mojolicious::Plugin::AccessLog - AccessLog Plugin
 
 VERSION
-    Version 0.005
+    Version 0.006
 
 SYNOPSIS
       # Mojolicious
@@ -117,6 +117,11 @@ OPTIONS
 
     %u  Remote user, or '-'.
 
+        The remote user is first looked up in "$c->req->env->{REMOTE_USER}"
+        and only if that does not exist then in the first part of
+        "$c->req->url->base->userinfo". This means the latter lookup can be
+        disabled by setting "$c->req->env->{REMOTE_USER} = undef".
+
     %U  The URL path requested, not including any query string.
 
     %v  The name of the server serving the request.
@@ -141,7 +146,11 @@ OPTIONS
         server.
 
     %{VariableName}e
-        The contents of environment variable "VariableName".
+        Content of the request environment hash variable "VariableName":
+
+          $c->req->env->{VariableName}
+
+        The request environment hash is set by a CGI or PSGI server.
 
     Non-printable bytes are replaced by an escape sequence of "\x.." with
     ".." being the hexadecimal code of the replaced byte.
@@ -175,33 +184,6 @@ OPTIONS
     requires a DNS lookup to complete before the request is finished.
     Default is "false" (= disabled).
 
-  "uname_helper"
-      plugin AccessLog => {
-        log => '/var/log/mojo/access.log',
-        uname_helper => 'set_username',
-      };
-
-      ...
-
-      # custom authentication for all following resources
-      under => sub {
-        my $self = shift;
-        my $username = $self->param('username') || '';
-
-        if ($username =~ /^mc/) {   # Scottish only
-          $self->set_username($username);
-        }
-        else {
-          $self->render('denied');
-          return undef;
-        }
-      };
-
-    Define a name for a helper to set the username. The default is to use
-    the username part of the "userinfo" in Mojo::URL. With a custom
-    "uname_helper" any identifier can be set for the user value in the log
-    file.
-
 METHODS
     Mojolicious::Plugin::AccessLog inherits all methods from
     Mojolicious::Plugin and implements the following new ones.
@@ -230,7 +212,7 @@ AUTHOR
     Bernhard Graf <graf(a)cpan.org>
 
 COPYRIGHT AND LICENSE
-    Copyright (C) 2012 - 2014 Bernhard Graf
+    Copyright (C) 2012 - 2015 Bernhard Graf
 
     This library is free software; you can redistribute it and/or modify it
     under the same terms as Perl itself.

@@ -3,7 +3,7 @@ package Mojolicious::Plugin::AccessLog;
 use Mojo::Base 'Mojolicious::Plugin';
 use Mojo::IOLoop;
 
-use Carp qw(croak);
+use Carp qw(carp croak);
 use File::Spec;
 use IO::File;
 use POSIX qw(setlocale strftime LC_ALL);
@@ -11,7 +11,7 @@ use Scalar::Util qw(blessed reftype);
 use Socket qw(inet_aton AF_INET);
 use Time::HiRes qw(gettimeofday tv_interval);
 
-our $VERSION = '0.005';
+our $VERSION = '0.006';
 
 my $DEFAULT_FORMAT = 'common';
 my %FORMATS = (
@@ -19,8 +19,6 @@ my %FORMATS = (
     combined => '%h %l %u %t "%r" %>s %b "%{Referer}i" "%{User-Agent}i"',
     combinedio => '%h %l %u %t "%r" %>s %b "%{Referer}i" "%{User-Agent}i" %I %O',
 );
-
-my $STASH_ID = 'mojolicious.plugin.accesslog.username';
 
 # some systems (Windows) don't support %z correctly
 my $TZOFFSET = strftime('%z', localtime) !~ /^[+-]\d{4}$/ && do {
@@ -71,12 +69,14 @@ sub register {
     }
 
     if ($conf->{uname_helper}) {
+        carp 'uname_helper is DEPRECATED in favor of $c->req->env->{REMOTE_USER}';
+
         my $helper_name = $conf->{uname_helper};
 
         $helper_name = 'set_username' if $helper_name !~ /^[\_A-za-z]\w*$/;
 
         $app->helper(
-            $helper_name => sub { $_[0]->stash->{$STASH_ID} = $_[1] }
+            $helper_name => sub { $_[0]->req->env->{REMOTE_USER} = $_[1] }
         );
     }
 
@@ -104,24 +104,24 @@ sub register {
     }
 
     # each handler is called with following parameters:
-    # ($c, $tx, $tx->req, $tx->res, $tx->req->url, $time)
+    # ($tx, $tx->req, $tx->res, $tx->req->url, $time)
 
     my $block_handler = sub {
         my ($block, $type) = @_;
 
-        return sub { _safe($_[2]->headers->header($block) // '-') }
+        return sub { _safe($_[1]->headers->header($block) // '-') }
             if $type eq 'i';
 
-        return sub { $_[3]->headers->header($block) // '-' }
+        return sub { $_[2]->headers->header($block) // '-' }
             if $type eq 'o';
 
         return sub { '[' . $strftime->($block, localtime) . ']' }
             if $type eq 't';
 
-        return sub { _safe($_[2]->cookie($block // '')) }
+        return sub { _safe($_[1]->cookie($block // '')) }
             if $type eq 'C';
 
-        return sub { _safe($_[2]->env->{$block // ''}) }
+        return sub { _safe($_[1]->env->{$block // ''}) }
             if $type eq 'e';
 
         $app->log->error("{$block}$type not supported");
@@ -129,66 +129,62 @@ sub register {
         return '-';
     };
 
-    my $servername_cb = sub { $_[4]->base->host || '-' };
-    my $remoteaddr_cb = sub { $_[1]->remote_address || '-' };
+    my $servername_cb = sub { $_[3]->base->host || '-' };
+    my $remoteaddr_cb = sub { $_[0]->remote_address || '-' };
     my %char_handler = (
         '%' => '%',
         a => $remoteaddr_cb,
-        A => sub { $_[1]->local_address // '-' },
-        b => sub { $_[3]->headers->content_length || '-' },
-        B => sub { $_[3]->headers->content_length || '0' },
-        D => sub { int($_[5] * 1000000) },
+        A => sub { $_[0]->local_address // '-' },
+        b => sub { $_[2]->headers->content_length || '-' },
+        B => sub { $_[2]->headers->content_length || '0' },
+        D => sub { int($_[4] * 1000000) },
         h => $remoteaddr_cb,
-        H => sub { 'HTTP/' . $_[2]->version },
-        I => sub { $_[6] },
+        H => sub { 'HTTP/' . $_[1]->version },
+        I => sub { $_[5] },
         l => '-',
-        m => sub { $_[2]->method },
-        O => sub { $_[7] },
-        p => sub { $_[1]->local_port },
+        m => sub { $_[1]->method },
+        O => sub { $_[6] },
+        p => sub { $_[0]->local_port },
         P => sub { $$ },
         q => sub {
-            my $s = $_[4]->query->to_string or return '';
+            my $s = $_[3]->query->to_string or return '';
             return '?' . $s;
         },
         r => sub {
-            $_[2]->method . ' ' . _safe($_[4]->to_string) .
-            ' HTTP/' . $_[2]->version
+            $_[1]->method . ' ' . _safe($_[3]->to_string) .
+            ' HTTP/' . $_[1]->version
         },
-        s => sub { $_[3]->code },
+        s => sub { $_[2]->code },
         t => sub { '[' . $strftime->('%d/%b/%Y:%H:%M:%S %z', localtime) . ']' },
-        T => sub { int $_[5] },
+        T => sub { int $_[4] },
         u => sub {
-            my $user = $_[0]->stash->{$STASH_ID};
+            my $env = $_[1]->env;
+            my $user =
+                exists($env->{REMOTE_USER}) ?
+                    length($env->{REMOTE_USER} // '') ?
+                        $env->{REMOTE_USER} : '-' :
+                        (split ':', $_[3]->base->userinfo || '-:')[0];
 
-            unless (defined $user) {
-                if (defined($user = $_[4]->base->userinfo)) {
-                    $user = (split ':', $_[4]->base->userinfo || '-:')[0];
-                }
-                else {
-                    $user = $ENV{REMOTE_USER} // '-';
-                }
-            }
             return _safe($user, $safe_re)
         },
-        U => sub { $_[4]->path },
+        U => sub { $_[3]->path },
         v => $servername_cb,
         V => $servername_cb,
     );
 
     if ($conf->{hostname_lookups}) {
         $char_handler{h} = sub {
-            my $ip = $_[1]->remote_address or return '-';
+            my $ip = $_[0]->remote_address or return '-';
             return gethostbyaddr(inet_aton($ip), AF_INET);
         };
     }
 
-    my ($time_stats, $traffic_stats);
+    my ($time_stats);
     my $char_handler = sub {
         my $char = shift;
         my $cb = $char_handler{$char};
 
         $time_stats = 1 if $char eq 'T' or $char eq 'D';
-        $traffic_stats = 1 if $char eq 'I' or $char eq 'O';
 
         return $char_handler{$char} if $char_handler{$char};
 
@@ -210,45 +206,36 @@ sub register {
     chomp $format;
     $format .= $conf->{lf} // $/ // "\n";
 
-    $app->hook(
-        before_dispatch => sub {
-            my $c = shift;
-            my $tx = $c->tx;
-            my $t; $t = [gettimeofday] if $time_stats;
-            my $bcr = my $bcw = 0;
-            my ($s, $r, $w);
+    $app->hook(after_build_tx => sub {
+        my $tx = $_[0];
+        my $t; $t = [gettimeofday] if $time_stats;
+        my $bcr = my $bcw = 0;
+        my ($s, $r, $w);
 
-            if ($traffic_stats) {
-                $tx->on(request => sub {
-                    my $tx = shift;
-                    $s = Mojo::IOLoop->stream($tx->connection);
-                    $r = $s->on(read  => sub { $bcr += length $_[1] });
-                    $w = $s->on(write => sub { $bcw += length $_[1] });
+        $tx->on(connection => sub {
+            my ($tx, $connection) = @_;
 
-                });
-            }
+            $s = Mojo::IOLoop->stream($connection);
+            $r = $s->on(read  => sub { $bcr += length $_[1] });
+            $w = $s->on(write => sub { $bcw += length $_[1] });
+        });
 
-            $tx->on(finish => sub {
-                my $tx = shift;
+        $tx->on(finish => sub {
+            my $tx = shift;
 
-                $t = tv_interval($t) if $time_stats;
+            $t = tv_interval($t) if $time_stats;
 
-                if ($traffic_stats) {
-                    $s->unsubscribe(read  => $r);
-                    $s->unsubscribe(write => $w);
-                }
-                $logger->(_log($c, $format, \@handler, $t, $bcr, $bcw));
-            });
-        }
-    );
-
+            $s->unsubscribe(read  => $r);
+            $s->unsubscribe(write => $w);
+            $logger->(_log($tx, $format, \@handler, $t, $bcr, $bcw));
+        });
+    });
 }
 
 sub _log {
-    my ($c, $format, $handler) = (shift, shift, shift);
-    my $tx = $c->tx;
+    my ($tx, $format, $handler) = (shift, shift, shift);
     my $req = $tx->req;
-    my @args = ($c, $tx, $req, $tx->res, $req->url, @_);
+    my @args = ($tx, $req, $tx->res, $req->url, @_);
 
     sprintf $format, map(ref() ? ($_->(@args))[0] // '' : $_, @$handler);
 }
@@ -273,7 +260,7 @@ Mojolicious::Plugin::AccessLog - AccessLog Plugin
 
 =head1 VERSION
 
-Version 0.005
+Version 0.006
 
 =head1 SYNOPSIS
 
@@ -436,6 +423,11 @@ Custom field for handling times in subclasses.
 
 Remote user, or '-'.
 
+The remote user is first looked up in C<< $c->req->env->{REMOTE_USER} >>
+and only if that does not exist then in the first part of
+C<< $c->req->url->base->userinfo >>. This means the latter lookup can be
+disabled by setting C<< $c->req->env->{REMOTE_USER} = undef >>.
+
 =item %U
 
 The URL path requested, not including any query string.
@@ -474,7 +466,11 @@ The contents of cookie C<CookieName> in the request sent to the server.
 
 =item %{VariableName}e
 
-The contents of environment variable C<VariableName>.
+Content of the request environment hash variable C<VariableName>:
+
+  $c->req->env->{VariableName}
+
+The request environment hash is set by a L<CGI> or L<PSGI> server.
 
 =back
 
@@ -508,8 +504,8 @@ These format template names have two drawbacks though:
 
 The username (%u) is not quoted, but a username is allowed to
 contain spaces. As a consequence, log file parsers might lose track of
-the right fields. To get around this, spaces in usernames are replaced
-by C<\x20> if one of the format template names is used.
+the right fields. To get around this, B<< spaces in usernames are replaced
+by C<\x20> if one of the format template names is used >>.
 
 =item 2.
 
@@ -525,34 +521,6 @@ Enable reverse DNS hostname lookup if C<true>. Keep in mind, that this
 adds latency to every request, if C<%h> is part of the log line, because
 it requires a DNS lookup to complete before the request is finished.
 Default is C<false> (= disabled).
-
-=head2 C<uname_helper>
-
-  plugin AccessLog => {
-    log => '/var/log/mojo/access.log',
-    uname_helper => 'set_username',
-  };
-
-  ...
-
-  # custom authentication for all following resources
-  under => sub {
-    my $self = shift;
-    my $username = $self->param('username') || '';
-
-    if ($username =~ /^mc/) {   # Scottish only
-      $self->set_username($username);
-    }
-    else {
-      $self->render('denied');
-      return undef;
-    }
-  };
-
-Define a name for a L<helper|Mojolicious/helper> to set the username.
-The default is to use the username part of the L<Mojo::URL/userinfo>.
-With a custom C<uname_helper> any identifier can be set for the user
-value in the log file.
 
 =head1 METHODS
 
@@ -589,7 +557,7 @@ Bernhard Graf <graf(a)cpan.org>
 
 =head1 COPYRIGHT AND LICENSE
 
-Copyright (C) 2012 - 2014 Bernhard Graf
+Copyright (C) 2012 - 2015 Bernhard Graf
 
 This library is free software; you can redistribute it and/or modify it
 under the same terms as Perl itself.
