@@ -1,5 +1,8 @@
 Revision history for Mojolicious-Plugin-AccessLog
 
+0.006   2015-03-22
+        - Requires Mojolicious 2.33.
+
 0.005   2015-01-29
         - Add traffic measuring like Apache mod_logio.
         - Test fix for localhost aka 127.0.0.1 (srezic, reneeb)

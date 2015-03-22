@@ -11,7 +11,7 @@ repository      'git://github.com/augensalat/mojolicious-plugin-accesslog.git';
 build_requires  'Test::More';
 build_requires  'Test::Mojo';
 
-requires        'Mojolicious' => '2.0';
+requires        'Mojolicious' => '2.33';
 requires        'Carp';
 requires        'File::Spec';
 requires        'IO::File';
