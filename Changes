@@ -7,6 +7,8 @@ Revision history for Mojolicious-Plugin-AccessLog
           rather than on the stash.
         - Deprecate uname_helper config option.
         - Enable Travis CI.
+        - Compute response size (%B, %b) from outbound traffic
+          if no Content-Length exists in the response header.
 
 0.005   2015-01-29
         - Add traffic measuring like Apache mod_logio.

@@ -26,13 +26,13 @@ app->log->unsubscribe('message');
 
 plugin 'AccessLog', format => 'combinedio';
 
-my $shortpoll_nolength;
 get '/dynamic' => sub {
     my $c = shift;
 
-    $c->on(finish => sub { $shortpoll_nolength = 'finished!' });
     $c->res->code(200);
     $c->res->headers->content_type('text/plain');
+
+    return if $c->res->content->skip_body;
 
     $c->write_chunk('He' => sub {
         my $c = shift;
@@ -76,21 +76,18 @@ sub req_ok {
     }
 
     # issue request
-    my $bcr = my $bcw = 0;
+    my $br = my $bw = '';
     my $start = $t->ua->on(start => sub {
         my ($ua, $tx) = @_;
         $tx->on(connection => sub {
             my ($tx, $connection) = @_;
-            my $stream = Mojo::IOLoop->stream($connection);
-            my $read   = $stream->on(read => sub {
-                $bcw += length $_[1];
-            });
-            my $write = $stream->on(write => sub {
-                $bcr += length $_[1];
-            });
+            my $s = Mojo::IOLoop->stream($connection);
+            my $r = $s->on(read  => sub { $bw .= $_[1] });
+            my $w = $s->on(write => sub { $br .= $_[1] });
+
             $tx->on(finish => sub {
-                $stream->unsubscribe(read  => $read);
-                $stream->unsubscribe(write => $write);
+                $s->unsubscribe(read  => $r);
+                $s->unsubscribe(write => $w);
             });
         });
     });
@@ -99,6 +96,13 @@ sub req_ok {
         ->status_is($code)
         ->tx->res;
     $t->ua->unsubscribe(start => $start);
+    my $empty_line_pos = index($bw, "\r\n\r\n");
+    my ($header_size, $body_size);
+
+    if ($empty_line_pos > 0) {
+        $header_size = $empty_line_pos + 4;
+        $body_size = length($bw) - $header_size;
+    }
 
     my $x = sprintf qq'^%s - %s %s "%s %s HTTP/1.1" %d %s "%s" "%s" %s %d\$',
         '127\.0\.0\.1',
@@ -107,12 +111,11 @@ sub req_ok {
         uc($method),
         quotemeta($url),
         $code,
-        $opts->{nolength} ? '-'
-            : $opts->{checklength} ? $opts->{checklength} : '\d+',
+        $opts->{nolength} ? '-' : $body_size || '-',
         $opts->{Referer} ? quotemeta($opts->{Referer}) : '-',
         quotemeta('Mojolicious (Perl)'),
-        $bcr,
-        $bcw;
+        length($br),
+        length($bw);
 
     # check last log line
     my ($l) = (split $/, $log)[-1];
@@ -127,8 +130,9 @@ req_ok(put => '/option' => 200);
     req_ok(get => "/more?foo=bar&foo=baz" => 200, {'X-User' => 'good boy'});
 }
 req_ok(delete => '/fb_account' => 200, {Referer => '/are_you_sure?'});
-req_ok(get => '/dynamic' => 200, {nolength => 1});
-req_ok(get => '/static.txt' => 206, {Range => 'bytes=2-5', checklength => 4});
+req_ok(get => '/dynamic' => 200);
+req_ok(head => '/dynamic' => 200);
+req_ok(get => '/static.txt' => 206, {Range => 'bytes=2-6'});
 
 done_testing;
 

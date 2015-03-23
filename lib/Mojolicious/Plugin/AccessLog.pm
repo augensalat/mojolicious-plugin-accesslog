@@ -104,7 +104,7 @@ sub register {
     }
 
     # each handler is called with following parameters:
-    # ($tx, $tx->req, $tx->res, $tx->req->url, $time)
+    # ($tx, $tx->req, $tx->res, $tx->req->url, $time, $bytes_in, $bytes_out)
 
     my $block_handler = sub {
         my ($block, $type) = @_;
@@ -135,8 +135,15 @@ sub register {
         '%' => '%',
         a => $remoteaddr_cb,
         A => sub { $_[0]->local_address // '-' },
-        b => sub { $_[2]->headers->content_length || '-' },
-        B => sub { $_[2]->headers->content_length || '0' },
+        b => sub {
+            $_[2]->headers->content_length ||
+            $_[6] - $_[2]->header_size - $_[2]->start_line_size ||
+            '-'
+        },
+        B => sub {
+            $_[2]->headers->content_length ||
+            $_[6] - $_[2]->header_size - $_[2]->start_line_size
+        },
         D => sub { int($_[4] * 1000000) },
         h => $remoteaddr_cb,
         H => sub { 'HTTP/' . $_[1]->version },
