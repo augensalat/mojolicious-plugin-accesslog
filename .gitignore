@@ -13,3 +13,4 @@ Mojolicious-Plugin-AccessLog-*
 *~
 .*
 !.gitignore
+!.travis.yml
