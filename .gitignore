@@ -2,7 +2,8 @@ blib*
 inc
 Makefile
 Makefile.old
-MANIFEST.bak
+MANIFEST*
+!MANIFEST.skip
 META.*
 pm_to_blib*
 *.tar.gz
