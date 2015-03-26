@@ -7,5 +7,5 @@ perl:
     - "5.12"
     - "5.10"
 install:
-    - "cpanm --notest Module::Install Module::Install::ReadmeFromPod"
+    - "cpanm --notest Module::Install"
     - "cpanm --notest --installdeps ."
