@@ -3,7 +3,6 @@ package Mojolicious::Plugin::AccessLog;
 use Mojo::Base 'Mojolicious::Plugin';
 use Mojo::IOLoop;
 
-use Carp qw(carp croak);
 use File::Spec;
 use IO::File;
 use POSIX qw(setlocale strftime LC_ALL);
@@ -31,6 +30,7 @@ my $TZOFFSET = strftime('%z', localtime) !~ /^[+-]\d{4}$/ && do {
 sub register {
     my ($self, $app, $conf) = @_;
     my $log = $conf->{log} // $app->log->handle;
+    my ($pkg, $f, $l) = caller 2;   # :-/
     my $fh;
 
     unless ($log) { # somebody cleared $app->log->handle?
@@ -58,7 +58,8 @@ sub register {
             or $log = $app->home->rel_file($log);
 
         $fh = IO::File->new($log, '>>')
-            or croak qq{Can't open log file "$log": $!};
+            or die <<"";
+Can't open log file "$log": $! at $f line $l.
 
         $fh->autoflush(1);
         $logger = sub { $fh->print($_[0]) };
@@ -69,7 +70,9 @@ sub register {
     }
 
     if ($conf->{uname_helper}) {
-        carp 'uname_helper is DEPRECATED in favor of $c->req->env->{REMOTE_USER}';
+        warn <<"";
+uname_helper is DEPRECATED in favor of \$c->req->env->{REMOTE_USER} at $f line $l.
+
 
         my $helper_name = $conf->{uname_helper};
 
