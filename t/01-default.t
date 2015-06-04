@@ -29,6 +29,7 @@ plugin 'AccessLog';
 any '/:any' => sub {
     my $c = shift;
     my $xuser = $c->req->headers->header('X-User');
+    my $p = $c->req->params->to_hash;   # lazy-builds Mojo::Parameters!
 
     $c->req->env->{REMOTE_USER} = $xuser if $xuser;
     $c->render(text => 'done');
@@ -72,6 +73,7 @@ sub req_ok {
 }
 
 req_ok(get => '/' => 404, {Referer => 'http://www.example.com/'});
+req_ok(get => '/file?path=foo%2fbar&mode=r%2cw' => 200, {Referer => '/'});
 req_ok(post => '/a_letter' => 200, {Referer => '/'});
 req_ok(put => '/option' => 200);
 {

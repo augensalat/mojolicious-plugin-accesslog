@@ -6,7 +6,7 @@ use Mojo::IOLoop;
 use File::Spec;
 use IO::File;
 use POSIX qw(setlocale strftime LC_ALL);
-use Scalar::Util qw(blessed reftype);
+use Scalar::Util qw(blessed reftype weaken);
 use Socket qw(inet_aton AF_INET);
 use Time::HiRes qw(gettimeofday tv_interval);
 
@@ -160,10 +160,7 @@ uname_helper is DEPRECATED in favor of \$c->req->env->{REMOTE_USER} at $f line $
             my $s = $_[3]->query->to_string or return '';
             return '?' . $s;
         },
-        r => sub {
-            $_[1]->method . ' ' . _safe($_[3]->to_string) .
-            ' HTTP/' . $_[1]->version
-        },
+        r => sub { substr($_[1]->build_start_line, 0, -2) },
         s => sub { $_[2]->code },
         t => sub { '[' . $strftime->('%d/%b/%Y:%H:%M:%S %z', localtime) . ']' },
         T => sub { int $_[4] },
@@ -229,6 +226,9 @@ uname_helper is DEPRECATED in favor of \$c->req->env->{REMOTE_USER} at $f line $
             $r = $s->on(read  => sub { $bcr += length $_[1] });
             $w = $s->on(write => sub { $bcw += length $_[1] });
         });
+
+        # watch for the right moment to fetch the un-expanded start-line
+        $tx->req->once(progress => sub { $_[0]->build_start_line });
 
         $tx->on(finish => sub {
             my $tx = shift;
