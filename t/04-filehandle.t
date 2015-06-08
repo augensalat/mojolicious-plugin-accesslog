@@ -8,6 +8,9 @@ BEGIN {
     $ENV{MOJO_REACTOR} = 'Mojo::Reactor::Poll';
 }
 
+use lib 't/lib';
+
+use MPA_Test qw(log2unixtime);
 use Test::More;
 
 use Fcntl qw(:seek);
@@ -34,7 +37,12 @@ plugin 'AccessLog',
 
 any '/:any' => sub {
     my $c = shift;
-    my $xuser = $c->req->headers->header('X-User');
+    my $p = $c->req->params->to_hash;   # lazy-builds Mojo::Parameters!
+    my $req_h = $c->req->headers;
+    my $xuser = $req_h->header('X-User');
+    my $delay = $req_h->header('X-Delay');
+
+    select undef, undef, undef, $delay if $delay;
 
     $c->req->env->{REMOTE_USER} = $xuser if $xuser;
     $c->render(text => 'done');
@@ -74,7 +82,7 @@ sub req_ok {
         $url = substr $url, 0, $pos;
     }
 
-    my $x = sprintf qq'^%% %s %s %s %s %s %s %s %s %s %s "%s" "%s" %u %s %s "%s" %s %s %s "%s" "%s"\$',
+    my $x = sprintf qq'^%% %s %s %s %s (%s) %s %s %s %s %s "%s" "%s" %u (%s) (%s) "%s" %s %s %s "%s" "%s"\$',
         '127\.0\.0\.1', '127\.0\.0\.1',
         '\d+', '\d+', '\d+',
         '127\.0\.0\.1',
@@ -92,6 +100,8 @@ sub req_ok {
         $opts->{Referer} ? quotemeta($opts->{Referer}) : '-',
         quotemeta('Mojolicious (Perl)');
 
+    my $now = time;
+
     # issue request
     $m->($t, $url . $query, $opts)->status_is($code);
 
@@ -105,10 +115,18 @@ sub req_ok {
     eof $tail
         or return fail "not eof after reading last log line";
 
-    like $l, qr{$x}, $l;
+    if (like($l, qr/$x/, $l) and $opts->{'X-Delay'}) {
+        my ($dus, $t, $ds) = $l =~ qr/$x/;
+        my $reqtime = log2unixtime($t);
+        cmp_ok $reqtime, '<', time, "request time is before current time";
+        cmp_ok $ds, '>=', $opts->{'X-Delay'}, 'delay is logged in seconds';
+        cmp_ok $dus, '>=', $opts->{'X-Delay'} * 1_000_000,
+               'delay is logged in micro seconds';
+    }
 }
 
 req_ok(get => '/' => 404, {Referer => 'http://www.example.com/'});
+req_ok(get => '/slow' => 200, {Referer => '/', 'X-Delay' => 2});
 req_ok(post => '/a_letter' => 200, {Referer => '/'});
 req_ok(put => '/option' => 200);
 {

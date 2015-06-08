@@ -8,6 +8,9 @@ BEGIN {
     $ENV{MOJO_REACTOR} = 'Mojo::Reactor::Poll';
 }
 
+use lib 't/lib';
+
+use MPA_Test qw(log2unixtime);
 use Test::More;
 
 use Mojo::Util qw(b64_encode);
@@ -40,7 +43,11 @@ plugin 'AccessLog', log => $log, format => 'combined';
 
 any '/:any' => sub {
     my $c = shift;
-    my $xuser = $c->req->headers->header('X-User');
+    my $req_h = $c->req->headers;
+    my $xuser = $req_h->header('X-User');
+    my $delay = $req_h->header('X-Delay');
+
+    select undef, undef, undef, $delay if $delay;
 
     $c->req->env->{REMOTE_USER} = $xuser if $xuser;
     $c->render(text => 'done');
@@ -66,7 +73,7 @@ sub req_ok {
         $user =~ s/([^[:print:]]|\s)/'\x' . unpack('H*', $1)/eg;
     }
 
-    my $x = sprintf qq'^%s - %s %s "%s %s HTTP/1.1" %d %s "%s" "%s"\$',
+    my $x = sprintf qq'^%s - %s (%s) "%s %s HTTP/1.1" %d %s "%s" "%s"\$',
         '127\.0\.0\.1',
         quotemeta($user),
         '\[\d{1,2}/\w{3}/\d{4}:\d{2}:\d{2}:\d{2} [\+\-]\d{4}\]',
@@ -83,10 +90,16 @@ sub req_ok {
     # check log line
     my $l = $log->peek;
     chomp $l;
-    like $l, qr{$x}, $l;
+
+    if (like($l, qr/$x/, $l) and $opts->{'X-Delay'}) {
+        $l =~ qr/$x/;
+        my $reqtime = log2unixtime($1);
+        cmp_ok $reqtime, '<', time, "request time is before current time";
+    }
 }
 
 req_ok(get => '/' => 404, {Referer => 'http://www.example.com/'});
+req_ok(get => '/slow' => 200, {Referer => '/', 'X-Delay' => 2});
 req_ok(post => '/a_letter' => 200, {Referer => '/'});
 req_ok(put => '/option' => 200);
 {

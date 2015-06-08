@@ -107,7 +107,8 @@ uname_helper is DEPRECATED in favor of \$c->req->env->{REMOTE_USER} at $f line $
     }
 
     # each handler is called with following parameters:
-    # ($tx, $tx->req, $tx->res, $tx->req->url, $time, $bytes_in, $bytes_out)
+    # 0: $tx, 1: $tx->req, 2: $tx->res, 3: $tx->req->url,
+    # 4: $request_start_time, 5: $process_time, 6: $bytes_in, 7: $bytes_out
 
     my $block_handler = sub {
         my ($block, $type) = @_;
@@ -118,7 +119,7 @@ uname_helper is DEPRECATED in favor of \$c->req->env->{REMOTE_USER} at $f line $
         return sub { $_[2]->headers->header($block) // '-' }
             if $type eq 'o';
 
-        return sub { $strftime->($block, localtime) }
+        return sub { $strftime->($block, localtime($_[4][0])) }
             if $type eq 't';
 
         return sub { _safe($_[1]->cookie($block // '')) }
@@ -140,20 +141,20 @@ uname_helper is DEPRECATED in favor of \$c->req->env->{REMOTE_USER} at $f line $
         A => sub { $_[0]->local_address // '-' },
         b => sub {
             $_[2]->headers->content_length ||
-            $_[6] - $_[2]->header_size - $_[2]->start_line_size ||
+            $_[7] - $_[2]->header_size - $_[2]->start_line_size ||
             '-'
         },
         B => sub {
             $_[2]->headers->content_length ||
-            $_[6] - $_[2]->header_size - $_[2]->start_line_size
+            $_[7] - $_[2]->header_size - $_[2]->start_line_size
         },
-        D => sub { int($_[4] * 1000000) },
+        D => sub { int($_[5] * 1000000) },
         h => $remoteaddr_cb,
         H => sub { 'HTTP/' . $_[1]->version },
-        I => sub { $_[5] },
+        I => sub { $_[6] },
         l => '-',
         m => sub { $_[1]->method },
-        O => sub { $_[6] },
+        O => sub { $_[7] },
         p => sub { $_[0]->local_port },
         P => sub { $$ },
         q => sub {
@@ -162,8 +163,10 @@ uname_helper is DEPRECATED in favor of \$c->req->env->{REMOTE_USER} at $f line $
         },
         r => sub { substr($_[1]->build_start_line, 0, -2) },
         s => sub { $_[2]->code },
-        t => sub { '[' . $strftime->('%d/%b/%Y:%H:%M:%S %z', localtime) . ']' },
-        T => sub { int $_[4] },
+        t => sub {
+            $strftime->('[%d/%b/%Y:%H:%M:%S %z]', localtime($_[4][0]))
+        },
+        T => sub { int $_[5] },
         u => sub {
             my $env = $_[1]->env;
             my $user =
@@ -186,12 +189,9 @@ uname_helper is DEPRECATED in favor of \$c->req->env->{REMOTE_USER} at $f line $
         };
     }
 
-    my ($time_stats);
     my $char_handler = sub {
         my $char = shift;
         my $cb = $char_handler{$char};
-
-        $time_stats = 1 if $char eq 'T' or $char eq 'D';
 
         return $char_handler{$char} if $char_handler{$char};
 
@@ -215,13 +215,13 @@ uname_helper is DEPRECATED in favor of \$c->req->env->{REMOTE_USER} at $f line $
 
     $app->hook(after_build_tx => sub {
         my $tx = $_[0];
-        my $t; $t = [gettimeofday] if $time_stats;
         my $bcr = my $bcw = 0;
-        my ($s, $r, $w);
+        my ($r, $s, $t, $w);
 
         $tx->on(connection => sub {
             my ($tx, $connection) = @_;
 
+            $t = [gettimeofday];
             $s = Mojo::IOLoop->stream($connection);
             $r = $s->on(read  => sub { $bcr += length $_[1] });
             $w = $s->on(write => sub { $bcw += length $_[1] });
@@ -232,12 +232,11 @@ uname_helper is DEPRECATED in favor of \$c->req->env->{REMOTE_USER} at $f line $
 
         $tx->on(finish => sub {
             my $tx = shift;
-
-            $t = tv_interval($t) if $time_stats;
+            my $dt = tv_interval($t);
 
             $s->unsubscribe(read  => $r);
             $s->unsubscribe(write => $w);
-            $logger->(_log($tx, $format, \@handler, $t, $bcr, $bcw));
+            $logger->(_log($tx, $format, \@handler, $t, $dt, $bcr, $bcw));
         });
     });
 }
@@ -427,7 +426,7 @@ Time the request was received (standard english format).
 
 =item %T
 
-Custom field for handling times in subclasses.
+The time taken to serve the request, in seconds.
 
 =item %u
 

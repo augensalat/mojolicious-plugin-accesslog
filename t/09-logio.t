@@ -8,6 +8,9 @@ BEGIN {
     $ENV{MOJO_REACTOR} = 'Mojo::Reactor::Poll';
 }
 
+use lib 't/lib';
+
+use MPA_Test qw(log2unixtime);
 use Test::More;
 
 use Mojo::Util qw(b64_encode);
@@ -34,12 +37,18 @@ get '/dynamic' => sub {
 
     return if $c->res->content->skip_body;
 
+    my $delay = $c->req->headers->header('X-Delay');
+
+    $delay /= 2 if $delay;
+
     $c->write_chunk('He' => sub {
         my $c = shift;
 
+        select undef, undef, undef, $delay if $delay;
         $c->write_chunk('ll' => sub {
             my $c = shift;
 
+            select undef, undef, undef, $delay if $delay;
             $c->finish('o!');
         });
     });
@@ -47,7 +56,11 @@ get '/dynamic' => sub {
 
 any '/:any' => sub {
     my $c = shift;
-    my $xuser = $c->req->headers->header('X-User');
+    my $req_h = $c->req->headers;
+    my $xuser = $req_h->header('X-User');
+    my $delay = $req_h->header('X-Delay');
+
+    select undef, undef, undef, $delay if $delay;
 
     $c->req->env->{REMOTE_USER} = $xuser if $xuser;
     $c->render(text => 'done');
@@ -104,7 +117,7 @@ sub req_ok {
         $body_size = length($bw) - $header_size;
     }
 
-    my $x = sprintf qq'^%s - %s %s "%s %s HTTP/1.1" %d %s "%s" "%s" %s %d\$',
+    my $x = sprintf qq'^%s - %s (%s) "%s %s HTTP/1.1" %d %s "%s" "%s" %s %d\$',
         '127\.0\.0\.1',
         quotemeta($user),
         '\[\d{1,2}/\w{3}/\d{4}:\d{2}:\d{2}:\d{2} [\+\-]\d{4}\]',
@@ -119,10 +132,15 @@ sub req_ok {
 
     # check last log line
     my ($l) = (split $/, $log)[-1];
-    like $l, qr{$x}, $l;
+    if (like($l, qr/$x/, $l) and $opts->{'X-Delay'}) {
+        $l =~ qr/$x/;
+        my $reqtime = log2unixtime($1);
+        cmp_ok $reqtime, '<', time, "request time is before current time";
+    }
 }
 
 req_ok(get => '/' => 404, {Referer => 'http://www.example.com/'});
+req_ok(get => '/slow' => 200, {Referer => '/', 'X-Delay' => 2});
 req_ok(post => '/a_letter' => 200, {Referer => '/'});
 req_ok(put => '/option' => 200);
 {
@@ -130,7 +148,7 @@ req_ok(put => '/option' => 200);
     req_ok(get => "/more?foo=bar&foo=baz" => 200, {'X-User' => 'good boy'});
 }
 req_ok(delete => '/fb_account' => 200, {Referer => '/are_you_sure?'});
-req_ok(get => '/dynamic' => 200);
+req_ok(get => '/dynamic' => 200, {'X-Delay' => 2});
 req_ok(head => '/dynamic' => 200);
 req_ok(get => '/static.txt' => 206, {Range => 'bytes=2-6'});
 
