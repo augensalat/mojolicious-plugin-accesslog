@@ -118,7 +118,7 @@ uname_helper is DEPRECATED in favor of \$c->req->env->{REMOTE_USER} at $f line $
         return sub { $_[2]->headers->header($block) // '-' }
             if $type eq 'o';
 
-        return sub { '[' . $strftime->($block, localtime) . ']' }
+        return sub { $strftime->($block, localtime) }
             if $type eq 't';
 
         return sub { _safe($_[1]->cookie($block // '')) }
