@@ -119,7 +119,19 @@ uname_helper is DEPRECATED in favor of \$c->req->env->{REMOTE_USER} at $f line $
         return sub { $_[2]->headers->header($block) // '-' }
             if $type eq 'o';
 
-        return sub { $strftime->($block, localtime($_[4][0])) }
+        return sub {
+            return $_[4][0]
+                if $block eq 'sec';
+            return sprintf "%u%03u", $_[4][0], int($_[4][1] / 1000)
+                if $block eq 'msec';
+            return sprintf "%u%06u", @{$_[4]}
+                if $block eq 'usec';
+            return sprintf('%03u', $_[4][1] / 1000)
+                if $block eq 'msec_frac';
+            return sprintf('%06u', $_[4][1])
+                if $block eq 'usec_frac';
+            return $strftime->($block, localtime($_[4][0]));
+        }
             if $type eq 't';
 
         return sub { _safe($_[1]->cookie($block // '')) }
@@ -466,8 +478,39 @@ The contents of response header C<ResponseHeaderName>.
 
 =item %{Format}t
 
-The time, in the form given by C<Format>, which should be in
-L<strftime(3)> format.
+The time, in the form given by C<Format>, which should be in extended
+L<strftime(3)> format (potentially localized). In addition to the
+formats supported by strftime(3), the following format tokens are
+supported:
+
+=over
+
+=item sec:
+
+Number of seconds since the Epoch.
+
+=item msec:
+
+Number of milliseconds since the Epoch.
+
+=item usec:
+
+Number of microseconds since the Epoch.
+
+=item msec_frac:
+
+Millisecond fraction.
+
+=item usec_frac:
+
+Microsecond fraction.
+
+=back
+
+These tokens can not be combined with each other or strftime(3) formatting
+in the same format string. You can use multiple %{format}t tokens instead:
+
+  "%{%d/%b/%Y %T}t.%{msec_frac}t %{%z}t"
 
 =item %{CookieName}C
 

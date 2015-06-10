@@ -32,7 +32,7 @@ plugin 'AccessLog',
     format =>
         '"%{Referer}i" "%{User-Agent}i" "%{Set-Cookie}i" ' .
         '%s %{Content-Length}o "%{Content-Type}o" "%{Date}o" ' .
-        '%{%s}t';
+        '%{%s}t [%{%d/%b/%Y %T}t.%{msec_frac}t %{%z}t]';
 
 put '/option' => sub {
     my $self = shift;
@@ -81,7 +81,7 @@ sub req_ok {
         $url = substr $url, 0, $pos;
     }
 
-    my $x = sprintf qq'^"%s" "%s" "%s" %d %s "%s" "%s" %s\$',
+    my $x = sprintf '^"%s" "%s" "%s" %d %s "%s" "%s" %s \[%s\]$',
         $opts->{Referer} ? quotemeta($opts->{Referer}) : '-',
         quotemeta('Mojolicious (Perl)'),
         $opts->{'Set-Cookie'} ? quotemeta($opts->{'Set-Cookie'}) : '-',
@@ -89,7 +89,8 @@ sub req_ok {
         $code < 300 ? '4' : '\d+',
         quotemeta('text/html;charset=UTF-8'),
         '(Mon|Tue|Wed|Thu|Fri|Sat|Sun)\, \d{2} (Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) \d{4} \d{2}:\d{2}:\d{2} GMT',
-        '\d{10}';
+        '\d{10}',
+        '\d{2}/\w{3}/\d{4} \d{2}:\d{2}:\d{2}\.\d{3} [\+\-]\d{4}';
 
     # issue request
     my $t = $m->($t, $url . $query, $opts)->status_is($code)->tx->res->headers;
