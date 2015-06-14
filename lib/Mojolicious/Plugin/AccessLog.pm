@@ -152,13 +152,10 @@ uname_helper is DEPRECATED in favor of \$c->req->env->{REMOTE_USER} at $f line $
         a => $remoteaddr_cb,
         A => sub { $_[0]->local_address // '-' },
         b => sub {
-            $_[2]->headers->content_length ||
-            $_[7] - $_[2]->header_size - $_[2]->start_line_size ||
-            '-'
+            $_[7] && ($_[7] - $_[2]->header_size - $_[2]->start_line_size) || '-'
         },
         B => sub {
-            $_[2]->headers->content_length ||
-            $_[7] - $_[2]->header_size - $_[2]->start_line_size
+            $_[7] ? $_[7] - $_[2]->header_size - $_[2]->start_line_size : '0'
         },
         D => sub { int($_[5] * 1000000) },
         h => $remoteaddr_cb,
