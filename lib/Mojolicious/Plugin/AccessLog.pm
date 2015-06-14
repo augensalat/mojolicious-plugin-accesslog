@@ -171,7 +171,7 @@ uname_helper is DEPRECATED in favor of \$c->req->env->{REMOTE_USER} at $f line $
             return '?' . $s;
         },
         r => sub { substr($_[1]->build_start_line, 0, -2) },
-        s => sub { $_[2]->code },
+        s => sub { $_[2]->code // '-' },
         t => sub {
             $strftime->('[%d/%b/%Y:%H:%M:%S %z]', localtime($_[4][0]))
         },

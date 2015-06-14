@@ -19,7 +19,7 @@ app->log->unsubscribe('message');
 
 my ($b, $content_length, $inbound, $outbound);
 
-plugin 'AccessLog', log => sub { $b = $_[0] }, format => '%b %B %I %O';
+plugin 'AccessLog', log => sub { $b = $_[0] }, format => '%s %b %B %I %O';
 
 # reduce server inactivity timeout
 app->hook(after_build_tx => sub {
@@ -44,11 +44,12 @@ sub req_ok {
     # issue request
     $t->post_ok('/', @_)->status_is(200);
 
-    my $qr = qr/^(\S+)\s+(\d+)\s+(\d+)\s+(\d+)$/;
+    my $qr = qr/^(\S+)\s+(\S+)\s+(\d+)\s+(\d+)\s+(\d+)$/;
 
     if (like $b, $qr, 'correct log line format') {
-        my ($clclf_o, $cl_o, $log_i, $log_o) = $b =~ $qr;
+        my ($status, $clclf_o, $cl_o, $log_i, $log_o) = $b =~ $qr;
 
+        is $status, 200, "response status ok";
         is $log_i, length($inbound),  "count inbound bytes";
         is $cl_o, $content_length,  "outbound content length";
         is $clclf_o, $content_length,  "outbound content length";
@@ -81,7 +82,7 @@ sub req_intr {
         ok !$ok, 'POST / failed';
         is $err->{message}, 'Premature connection close', 'right error';
 
-        my $qr = qr/^\-\s+0\s+(\d+)\s+(\d+)$/;
+        my $qr = qr/^\-\s+\-\s+0\s+(\d+)\s+(\d+)$/;
 
         if (like $b, $qr, 'correct log line format') {
             my ($log_i, $log_o) = $b =~ $qr;

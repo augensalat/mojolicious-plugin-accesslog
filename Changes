@@ -1,6 +1,6 @@
 Revision history for Mojolicious-Plugin-AccessLog
 
-0.007	2015-06-14
+0.007	2015-06-15
         - Fix deprecation warning.
         - Replace auto-generated README by a gentle introduction in
           markdown format.
@@ -8,6 +8,7 @@ Revision history for Mojolicious-Plugin-AccessLog
         - Bug fix: %t is request start time rather than logging time.
         - Support for new Apache time string format tokens.
         - %b/%B counts bytes on wire rather than response content-length.
+        - Bug fix: %s is "-" if server did not sent a response.
 
 0.006   2015-03-23
         - Requires Mojolicious 2.33.
