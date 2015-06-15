@@ -78,9 +78,10 @@ sub req_intr {
 
     my $err = $t->tx->error;
 
-    if (!(my $ok = !$err->{message} || $err->{code}) && $err) {
-        ok !$ok, 'POST / failed';
-        is $err->{message}, 'Premature connection close', 'right error';
+    $err = $err->{message} if ref($err) eq 'HASH';  # Mojolicious v5.0 m(
+
+    if (ok $err, 'POST / failed') {
+        is $err, 'Premature connection close', 'right error';
 
         my $qr = qr/^\-\s+\-\s+0\s+(\d+)\s+(\d+)$/;
 
