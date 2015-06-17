@@ -26,6 +26,8 @@ my $TZOFFSET = strftime('%z', localtime) !~ /^[+-]\d{4}$/ && do {
     my $d = (Time::Local::timegm(localtime($t)) - $t) / 60;
     sprintf '%+03d%02u', int($d / 60), $d % 60;
 };
+# some systems (Windows) don't support %s
+my $NOEPOCHSECS = strftime('%s', localtime) !~ /^\d+$/;
 
 sub register {
     my ($self, $app, $conf) = @_;
@@ -87,6 +89,7 @@ uname_helper is DEPRECATED in favor of \$c->req->env->{REMOTE_USER} at $f line $
     my $strftime = sub {
         my ($fmt, @time) = @_;
         $fmt =~ s/%z/$TZOFFSET/g if $TZOFFSET;
+        $fmt =~ s/%s/time()/ge if $NOEPOCHSECS;
         my $old_locale = setlocale(LC_ALL);
         setlocale(LC_ALL, 'C');
         my $out = strftime($fmt, @time);

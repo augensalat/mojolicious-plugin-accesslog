@@ -1,6 +1,7 @@
 Revision history for Mojolicious-Plugin-AccessLog
 
-0.008	2015-06-16
+0.008	2015-06-17
+        - Workaround for strftime w/o %s support.
 
 0.007	2015-06-15
         - Fix deprecation warning.
