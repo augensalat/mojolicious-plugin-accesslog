@@ -23,7 +23,7 @@ plugin 'AccessLog', log => sub { $b = $_[0] }, format => '%s %b %B %I %O';
 
 # reduce server inactivity timeout
 app->hook(after_build_tx => sub {
-    $_[0]->on(connection => sub { Mojo::IOLoop->stream($_[1])->timeout(0.1) })
+    $_[0]->on(connection => sub { Mojo::IOLoop->stream($_[1])->timeout(0.5) })
 });
 
 
