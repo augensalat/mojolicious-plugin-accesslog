@@ -277,7 +277,7 @@ __END__
 
 =head1 NAME
 
-Mojolicious::Plugin::AccessLog - AccessLog Plugin
+Mojolicious::Plugin::AccessLog - An AccessLog Plugin for Mojolicious
 
 =head1 VERSION
 
@@ -605,7 +605,7 @@ those modules.
 
 =head1 AUTHOR
 
-Bernhard Graf <graf(a)cpan.org>
+Bernhard Graf
 
 =head1 COPYRIGHT AND LICENSE
 

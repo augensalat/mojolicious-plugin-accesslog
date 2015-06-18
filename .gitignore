@@ -3,7 +3,7 @@ inc
 Makefile
 Makefile.old
 MANIFEST*
-!MANIFEST.skip
+!MANIFEST.SKIP
 META.*
 pm_to_blib*
 *.tar.gz

@@ -1,0 +1,11 @@
+^\.(?!perltidyrc)
+.*\.old$
+\..*\.sw.$
+~$
+\.tar\.gz$
+^Makefile$
+^MANIFEST\.bak
+^MANIFEST\.SKIP
+^MYMETA\.
+^blib
+^pm_to_blib
