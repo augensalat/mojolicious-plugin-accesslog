@@ -4,6 +4,7 @@ Revision history for Mojolicious-Plugin-AccessLog
         - Workaround for strftime w/o %s support.
         - Increase inactivity timeout in test.
         - Switch to ExtUtils::MakeMaker.
+        - Apply remedy for insomnia.
 
 0.007	2015-06-15
         - Fix deprecation warning.

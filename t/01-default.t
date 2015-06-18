@@ -16,6 +16,7 @@ use Test::More;
 use Mojo::Util qw(b64_encode);
 use Mojolicious::Lite;
 use Test::Mojo;
+use Time::HiRes ();
 
 # Logger
 my $log = '';
@@ -35,9 +36,11 @@ any '/:any' => sub {
 
     my $req_h = $c->req->headers;
     my $xuser = $req_h->header('X-User');
-    my $delay = $req_h->header('X-Delay');
+    my $delay = $req_h->header('X-Delay') || 0;
 
-    select undef, undef, undef, $delay if $delay;
+    while ($delay > 0) {
+        $delay -= Time::HiRes::sleep($delay);
+    }
 
     $c->req->env->{REMOTE_USER} = $xuser if $xuser;
     $c->render(text => 'done');

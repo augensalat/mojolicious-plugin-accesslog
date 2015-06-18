@@ -18,6 +18,7 @@ use File::Spec;
 use Mojo::Util qw(b64_encode);
 use Mojolicious::Lite;
 use Test::Mojo;
+use Time::HiRes ();
 
 my $logfile = File::Spec->catfile(
     File::Spec->tmpdir, join('.', 'accesslog', time, $$, int(rand(1000)))
@@ -40,9 +41,11 @@ any '/:any' => sub {
     my $p = $c->req->params->to_hash;   # lazy-builds Mojo::Parameters!
     my $req_h = $c->req->headers;
     my $xuser = $req_h->header('X-User');
-    my $delay = $req_h->header('X-Delay');
+    my $delay = $req_h->header('X-Delay') || 0;
 
-    select undef, undef, undef, $delay if $delay;
+    while ($delay > 0) {
+        $delay -= Time::HiRes::sleep($delay);
+    }
 
     $c->req->env->{REMOTE_USER} = $xuser if $xuser;
     $c->render(text => 'done');
