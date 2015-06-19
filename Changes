@@ -1,6 +1,7 @@
 Revision history for Mojolicious-Plugin-AccessLog
 
 0.009   2015-06-19
+        - Windows strftime again: Remove strftime("%T") in test.
 
 0.008   2015-06-18
         - Workaround for strftime w/o %s support.

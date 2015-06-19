@@ -32,7 +32,7 @@ plugin 'AccessLog',
     format =>
         '"%{Referer}i" "%{User-Agent}i" "%{Set-Cookie}i" ' .
         '%s %{Content-Length}o "%{Content-Type}o" "%{Date}o" ' .
-        '%{%s}t [%{%d/%b/%Y %T}t.%{msec_frac}t %{%z}t]';
+        '%{%s}t [%{%d/%b/%Y %H:%M:%S}t.%{msec_frac}t %{%z}t]';
 
 put '/option' => sub {
     my $self = shift;
