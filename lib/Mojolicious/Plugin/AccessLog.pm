@@ -112,6 +112,7 @@ uname_helper is DEPRECATED in favor of \$c->req->env->{REMOTE_USER} at $f line $
     # each handler is called with following parameters:
     # 0: $tx, 1: $tx->req, 2: $tx->res, 3: $tx->req->url,
     # 4: $request_start_time, 5: $process_time, 6: $bytes_in, 7: $bytes_out
+    # 8: HTTP request start line
 
     my $block_handler = sub {
         my ($block, $type) = @_;
@@ -173,7 +174,7 @@ uname_helper is DEPRECATED in favor of \$c->req->env->{REMOTE_USER} at $f line $
             my $s = $_[3]->query->to_string or return '';
             return '?' . $s;
         },
-        r => sub { substr($_[1]->build_start_line, 0, -2) },
+        r => sub { $_[8] },
         s => sub { $_[2]->code // '-' },
         t => sub {
             $strftime->('[%d/%b/%Y:%H:%M:%S %z]', localtime($_[4][0]))
@@ -228,19 +229,20 @@ uname_helper is DEPRECATED in favor of \$c->req->env->{REMOTE_USER} at $f line $
     $app->hook(after_build_tx => sub {
         my $tx = $_[0];
         my $bcr = my $bcw = 0;
-        my ($r, $s, $t, $w);
+        my ($r, $s, $t, $w, $sl);
 
         $tx->on(connection => sub {
             my ($tx, $connection) = @_;
 
             $t = [gettimeofday];
             $s = Mojo::IOLoop->stream($connection);
-            $r = $s->on(read  => sub { $bcr += length $_[1] });
+            $r = $s->on(read  => sub {
+                # get the unmodified HTTP request start line
+                $sl //= substr($_[1], 0, index($_[1], "\r\n"));
+                $bcr += length $_[1];
+            });
             $w = $s->on(write => sub { $bcw += length $_[1] });
         });
-
-        # watch for the right moment to fetch the un-expanded start-line
-        $tx->req->once(progress => sub { $_[0]->build_start_line });
 
         $tx->on(finish => sub {
             my $tx = shift;
@@ -248,7 +250,7 @@ uname_helper is DEPRECATED in favor of \$c->req->env->{REMOTE_USER} at $f line $
 
             $s->unsubscribe(read  => $r);
             $s->unsubscribe(write => $w);
-            $logger->(_log($tx, $format, \@handler, $t, $dt, $bcr, $bcw));
+            $logger->(_log($tx, $format, \@handler, $t, $dt, $bcr, $bcw, $sl));
         });
     });
 }
