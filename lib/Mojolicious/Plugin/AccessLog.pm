@@ -33,8 +33,8 @@ sub register {
     my ($self, $app, $conf) = @_;
     my $log = $conf->{log} // $app->log->handle;
     my ($pkg, $f, $l) = caller 2;   # :-/
-    my $fh;
 
+    $app->log->warn(__PACKAGE__ . '::VERSION = ' . $VERSION);
     unless ($log) { # somebody cleared $app->log->handle?
         # Log a warning nevertheless - there might be an event handler.
         $app->log->warn(__PACKAGE__ . ': Log handle is not defined');
@@ -45,9 +45,8 @@ sub register {
     my $logger;
 
     if ($reftype eq 'GLOB') {
-        $fh = $log;
-        eval { $fh->autoflush(1) };
-        $logger = sub { $fh->print($_[0]) };
+        eval { $log->autoflush(1) };
+        $logger = sub { $log->print($_[0]) };
     }
     elsif (blessed($log) and my $l = $log->can('print') || $log->can('info')) {
         $logger = sub { $l->($log, $_[0]) };
@@ -59,7 +58,7 @@ sub register {
         File::Spec->file_name_is_absolute($log)
             or $log = $app->home->rel_file($log);
 
-        $fh = IO::File->new($log, '>>')
+        my $fh = IO::File->new($log, '>>')
             or die <<"";
 Can't open log file "$log": $! at $f line $l.
 
@@ -228,29 +227,32 @@ uname_helper is DEPRECATED in favor of \$c->req->env->{REMOTE_USER} at $f line $
 
     $app->hook(after_build_tx => sub {
         my $tx = $_[0];
-        my $bcr = my $bcw = 0;
-        my ($r, $s, $t, $w, $sl);
 
         $tx->on(connection => sub {
             my ($tx, $connection) = @_;
-
-            $t = [gettimeofday];
-            $s = Mojo::IOLoop->stream($connection);
-            $r = $s->on(read  => sub {
+            my $bcr = my $bcw = 0;
+            my $sl;
+            my $t = [gettimeofday];
+            my $s = Mojo::IOLoop->stream($connection);
+            my $r = $s->on(read  => sub {
                 # get the unmodified HTTP request start line
                 $sl //= substr($_[1], 0, index($_[1], "\r\n"));
                 $bcr += length $_[1];
             });
-            $w = $s->on(write => sub { $bcw += length $_[1] });
-        });
+            my $w = $s->on(write => sub { $bcw += length $_[1] });
 
-        $tx->on(finish => sub {
-            my $tx = shift;
-            my $dt = tv_interval($t);
+            weaken $s;
+            weaken $r;
+            weaken $w;
 
-            $s->unsubscribe(read  => $r);
-            $s->unsubscribe(write => $w);
-            $logger->(_log($tx, $format, \@handler, $t, $dt, $bcr, $bcw, $sl));
+            $tx->on(finish => sub {
+                my $tx = shift;
+                my $dt = tv_interval($t);
+
+                $s->unsubscribe(read  => $r);
+                $s->unsubscribe(write => $w);
+                $logger->(_log($tx, $format, \@handler, $t, $dt, $bcr, $bcw, $sl));
+            });
         });
     });
 }

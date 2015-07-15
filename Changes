@@ -1,7 +1,8 @@
 Revision history for Mojolicious-Plugin-AccessLog
 
-0.010   2015-07-03
+0.010   2015-07-15
         - Bug fix: Figure out request start line w/o side effects.
+        - Close severe memory leaks.
 
 0.009   2015-06-19
         - Windows strftime again: Remove strftime("%T") in test.
