@@ -473,10 +473,10 @@ The name of the server serving the request.
 =item %x
 
 The outermost ("real") client ip address as found in the
-L<X-Forwared-For|https://en.wikipedia.org/wiki/X-Forwarded-For> header,
+L<X-Forwarded-For|https://en.wikipedia.org/wiki/X-Forwarded-For> header,
 such as one that would be set in an environment with one or more
 layers of ssl- or cache-proxying. When C<X-Forwarded-For> is set to
-I<172.16.0.2, 127.0.0.1> C<%x> would interpolate to I<172.16.0.2>,
+eg. I<172.16.0.2, 127.0.0.1>, C<%x> would interpolate to I<172.16.0.2>,
 whereas C<%h> would interpolate to I<127.0.0.1>. To get the full
 header use C<%{X-Forwarded-For}i>.
 
