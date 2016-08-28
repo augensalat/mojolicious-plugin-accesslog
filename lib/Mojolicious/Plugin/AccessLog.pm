@@ -150,6 +150,10 @@ uname_helper is DEPRECATED in favor of \$c->req->env->{REMOTE_USER} at $f line $
 
     my $servername_cb = sub { $_[3]->base->host || '-' };
     my $remoteaddr_cb = sub { $_[0]->remote_address || '-' };
+    my $remoteaddr_xff_cb = sub {
+        my $xff = $_[0]->req->headers->header('X-Forwarded-For');
+        (split /, /, ($xff || '-'))[0];
+    };
     my %char_handler = (
         '%' => '%',
         a => $remoteaddr_cb,
@@ -192,6 +196,7 @@ uname_helper is DEPRECATED in favor of \$c->req->env->{REMOTE_USER} at $f line $
         U => sub { $_[3]->path },
         v => $servername_cb,
         V => $servername_cb,
+        x => $remoteaddr_xff_cb,
     );
 
     if ($conf->{hostname_lookups}) {
@@ -464,6 +469,16 @@ The name of the server serving the request.
 =item %V
 
 The name of the server serving the request.
+
+=item %x
+
+The outermost ("real") client ip address as found in the
+L<X-Forwarded-For|https://en.wikipedia.org/wiki/X-Forwarded-For> header,
+such as one that would be set in an environment with one or more
+layers of ssl- or cache-proxying. When C<X-Forwarded-For> is set to
+eg. I<172.16.0.2, 127.0.0.1>, C<%x> would interpolate to I<172.16.0.2>,
+whereas C<%h> would interpolate to I<127.0.0.1>. To get the full
+header use C<%{X-Forwarded-For}i>.
 
 =back
 
