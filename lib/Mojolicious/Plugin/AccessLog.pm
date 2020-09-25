@@ -10,7 +10,7 @@ use Scalar::Util qw(blessed reftype weaken);
 use Socket qw(inet_aton AF_INET);
 use Time::HiRes qw(gettimeofday tv_interval);
 
-our $VERSION = '0.010';
+our $VERSION = '0.010001';
 
 my $DEFAULT_FORMAT = 'common';
 my %FORMATS = (
