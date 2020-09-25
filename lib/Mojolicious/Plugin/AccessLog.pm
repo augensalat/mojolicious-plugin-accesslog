@@ -34,7 +34,6 @@ sub register {
     my $log = $conf->{log} // $app->log->handle;
     my ($pkg, $f, $l) = caller 2;   # :-/
 
-    $app->log->warn(__PACKAGE__ . '::VERSION = ' . $VERSION);
     unless ($log) { # somebody cleared $app->log->handle?
         # Log a warning nevertheless - there might be an event handler.
         $app->log->warn(__PACKAGE__ . ': Log handle is not defined');
