@@ -149,6 +149,15 @@ uname_helper is DEPRECATED in favor of \$c->req->env->{REMOTE_USER} at $f line $
 
     my $servername_cb = sub { $_[3]->base->host || '-' };
     my $remoteaddr_cb = sub { $_[0]->remote_address || '-' };
+    my $forwarded_cb = sub {
+                    my $xff = $_[0]->req->headers->header('X-Forwarded-For');
+                    if ($xff) {
+                            (split /, /, $xff )[0];
+                    } else {
+                            $_[0]->remote_address || '-';
+                    }
+
+        };
     my %char_handler = (
         '%' => '%',
         a => $remoteaddr_cb,
@@ -160,6 +169,7 @@ uname_helper is DEPRECATED in favor of \$c->req->env->{REMOTE_USER} at $f line $
             $_[7] ? $_[7] - $_[2]->header_size - $_[2]->start_line_size : '0'
         },
         D => sub { int($_[5] * 1000000) },
+        g => $forwarded_cb,
         h => $remoteaddr_cb,
         H => sub { 'HTTP/' . $_[1]->version },
         I => sub { $_[6] },
@@ -393,6 +403,10 @@ Size of response in bytes, excluding HTTP headers.
 =item %D
 
 The time taken to serve the request, in microseconds.
+
+=item %g
+
+The first entry of the X-Forwarded-For (XFF) header if the header exists, otherwise the remote address.
 
 =item %h
 
